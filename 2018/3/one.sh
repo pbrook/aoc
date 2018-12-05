@@ -14,5 +14,5 @@ while read id x0 y0 w h ; do
         done
     done
 done
-find /tmp/cloth -type f | xargs cat | grep 1 | wc -l
-rm -rf /tmp/cloth
+find $d -type f | xargs cat | grep 1 | wc -l
+rm -rf $d

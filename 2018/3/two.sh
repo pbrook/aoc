@@ -1,4 +1,4 @@
-d=/tmp/cloth
+d=/dev/shm/cloth
 rm -rf $d
 mkdir $d
 
@@ -32,4 +32,4 @@ while read id x0 y0 w h ; do
         break
     fi
 done
-rm -rf /tmp/cloth
+rm -rf $d
