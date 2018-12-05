@@ -8,9 +8,11 @@ alphabet() {
 }
 
 make_pattern() {
-  echo -n 's,(0'
+  echo -n 's,('
+  pipe=""
   alphabet | while read upper lower ; do
-    echo -n "|$upper$lower|$lower$upper"
+    echo -n "$pipe$upper$lower|$lower$upper"
+    pipe="|"
   done
   echo -n '),,g'
 }
@@ -18,10 +20,11 @@ make_pattern() {
 pattern=$(make_pattern)
 
 react() {
-  echo -n $(cat input.txt) | sed -E -e "s,[$1$2],,g;:1;$pattern;t1" | wc -c
+  sed -E -e "$1:1;$pattern;t1"
 }
 
+pre=$(react < input.txt)
 alphabet | while read upper lower ; do
-  react $upper $lower
+  echo -n $pre | react "s,[$upper$lower],,g;" | wc -c
 done | sort -n | head -n1
 
