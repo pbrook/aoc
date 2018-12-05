@@ -18,5 +18,17 @@ while read id x0 y0 w h ; do
     cloth[$y]=$left$mid$right
   done
 done
+
 echo -n ${cloth[@]} | sed -e 's/[^2]//g' | wc -c
-)
+
+cat input.txt | sed -e 's/[^0-9]/ /g' | ( \
+while read id x0 y0 w h ; do
+  if ! for y in $(seq $y0 $(($y0 + $h - 1))) ; do
+    row=${cloth[$y]}
+    echo ${row:$x0:$w}
+  done | grep -q 2 ; then
+    echo $id
+    break
+  fi
+done
+))
