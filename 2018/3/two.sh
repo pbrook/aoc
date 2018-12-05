@@ -1,35 +1,31 @@
-d=/dev/shm/cloth
-rm -rf $d
-mkdir $d
+#! /bin/bash
 
-cat input.txt | sed -e 's/[^0-9]/ /g' | \
-while read id x0 y0 w h ; do
-    for x in $(seq $x0 $(($x0 + $w - 1))) ; do
-        for y in $(seq $y0 $(($y0 + $h - 1))) ; do
-            if [ -f $d/$x:$y ] ; then
-                echo X > $d/$x:$y
-            else
-                echo $id > $d/$x:$y
-            fi
-        done
-    done
+cat input.txt | sed -e 's/[^0-9]/ /g' | ( \
+zero=$(printf "%01000d" 0)
+declare -a cloth
+for y in $(seq 0 999) ; do
+  cloth[$y]=$zero
 done
-echo pass1
-cat input.txt | sed -e 's/[^0-9]/ /g' | \
 while read id x0 y0 w h ; do
-    n=false
-    for x in $(seq $x0 $(($x0 + $w - 1))) ; do
-        for y in $(seq $y0 $(($y0 + $h - 1))) ; do
-            if [ $(cat $d/$x:$y) = 'X' ]; then
-                n=true
-                break;
-            fi
-        done
-        $n && break
-    done
-    if ! $n ; then
-        echo $id
-        break
-    fi
+  x1=$(($x0 + $w))
+  for y in $(seq $y0 $(($y0 + $h - 1))) ; do
+    row=${cloth[$y]}
+    left=${row::$x0}
+    mid=${row:$x0:$w}
+    right=${row:$x1}
+    mid=${mid//1/2}
+    mid=${mid//0/1}
+    cloth[$y]=$left$mid$right
+  done
 done
-rm -rf $d
+cat input.txt | sed -e 's/[^0-9]/ /g' | ( \
+while read id x0 y0 w h ; do
+  if ! for y in $(seq $y0 $(($y0 + $h - 1))) ; do
+    row=${cloth[$y]}
+    echo ${row:$x0:$w}
+  done | grep -q 2 ; then
+    echo $id
+    break
+  fi
+done
+))
