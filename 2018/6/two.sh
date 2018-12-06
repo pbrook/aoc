@@ -1,44 +1,63 @@
 #! /bin/bash
 
-# Takes a couple of minutes to run
-
 wd=/tmp/aoc6
 rm -rf $wd
 mkdir -p $wd
 
+tot=0
+np=0
 while read x y ; do
   x=${x%,}
-  echo $x $y
-done < input.txt > $wd/inp
+  echo $x >> $wd/x_raw
+  echo $y >> $wd/y_raw
+  tot=$(($tot + $x + $y))
+  np=$(($np + 1))
+done < input.txt
+#target=32
 target=10000
 
-left=$(cut -d' ' -f 1 $wd/inp | sort -n | head -n1)
-right=$(cut -d' ' -f 1 $wd/inp | sort -n | tail -n1)
-top=$(cut -d' ' -f 2 $wd/inp | sort -n | head -n1)
-bot=$(cut -d' ' -f 2 $wd/inp | sort -n | tail -n1)
+sort -n $wd/x_raw > $wd/x
+sort -n $wd/y_raw > $wd/y
 
-all_md() {
-  local x0=$1 y0=$2
-  local x y dx dy md
-  local tot=0
-  while read x y ; do
-    dy=$(($y - $y0))
-    dx=$(($x0 - $x))
-    md=$(( ( ($dx >= 0) ? $dx : -$dx) + ( ($dy >= 0) ? $dy : -$dy) ))
-    echo +$md
-  done < $wd/inp
+left=$(head -n1 $wd/x)
+right=$(tail -n1 $wd/x)
+top=$(head -n1 $wd/y)
+bot=$(tail -n1 $wd/y)
+tot=$(($tot - ($np * ($left + $top)) ))
+
+build_deltas() {
+  delta=-$np
+  read next_x
+  for x in $(seq $1 $2); do
+    while [ $x = "$next_x" ] ; do
+      read next_x
+      delta=$((delta + 2))
+    done
+    echo $delta
+  done
 }
 
+build_deltas $left $right < $wd/x > $wd/dx
+
+build_deltas $top $bot < $wd/y > $wd/dy
+
+nr=0
+while read delta ; do
+  dist[$nr]=$tot
+  tot=$(($tot + $delta))
+  nr=$(($nr + 1))
+done < $wd/dy
+
 safe=0
-# Assume safe region does not include all locations
-for x in $(seq $left $right) ; do
-  for y in $(seq $top $bot) ; do
-    td=$(($(all_md $x $y)))
-    if [ $td -lt $target ] ; then
+while read delta ; do
+  for n in ${!dist[@]} ; do
+    d=${dist[$n]}
+    if [ $d -lt $target ] ; then
       safe=$(($safe + 1))
     fi
+    dist[$n]=$(($d + $delta))
   done
-done
+done < $wd/dx
 echo $safe
 
 rm -rf $wd
