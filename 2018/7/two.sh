@@ -36,8 +36,9 @@ part_time() {
   echo $(($startup + $n + $tick))
 }
 
-tick=0
-while [ $(wc -l < $wd/todo) != 0 ] ; do
+newtick=0
+while [ $newtick != 9999 ] ; do
+  tick=$newtick
 #echo "Tick $tick ${work[@]}"
 #cat $wd/todo
   for n in $(seq $num_workers); do
@@ -49,6 +50,7 @@ while [ $(wc -l < $wd/todo) != 0 ] ; do
 #echo "$n:Finish $part"
       sed -i -e "s/$part//;/^:-/d" $wd/todo
       work[$n]=""
+      timer[$n]=""
     fi
   done
   for n in $(seq $num_workers); do
@@ -63,9 +65,14 @@ while [ $(wc -l < $wd/todo) != 0 ] ; do
 #echo "$n:Start $part (${timer[$n]})"
     sed -i -e "s/^$part:/&-/" $wd/todo
   done
-  tick=$(($tick+1))
+  newtick=9999
+  for t in ${timer[@]} ; do
+    if [ -n "$t" ] && [ "$t" -lt $newtick ] ; then
+      newtick=$t
+    fi
+  done
 done
 
-echo $(($tick-1))
+echo $(($tick))
 
 rm -rf $wd
