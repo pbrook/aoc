@@ -3,21 +3,22 @@
 f=input.txt
 #f=small.txt
 
+sum=0
+
 parse() {
-    local nodes meta n val
+    local nodes meta val
     read nodes
     read meta
-    for n in $(seq $nodes) ; do
+    for (( ; $nodes > 0 ; nodes-- )) ; do
         parse
     done
-    for n in $(seq $meta) ; do
+    for (( ; $meta > 0 ; meta-- )) ; do
         read val
-        echo +$val
+        sum=$(($sum + $val))
     done
 }
 
-echo $(($(
-for x in $(cat $f) ; do
-    echo $x
-done | parse
-)))
+tr ' ' '\n' < $f | (
+parse
+echo $sum
+)

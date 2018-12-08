@@ -4,24 +4,23 @@ f=input.txt
 #f=small.txt
 
 parse() {
-    local nodes meta n val nodeval sum
+    local nodes meta n val sum=0
     read nodes
     read meta
-    sum=0
 #echo Node 1>&2
     if [ $nodes = 0 ] ; then
 #echo child 1>&2
-        for n in $(seq $meta) ; do
+        for (( ; $meta > 0 ; meta-- )) ; do
             read val
             sum=$(($val + $sum))
         done
     else
-        declare -a nodeval
-        for n in $(seq $nodes) ; do
+        local -a nodeval
+        for ((n=1 ; n <= $nodes ; n++)) ; do
             nodeval[$n]=$(parse)
 #echo $n ${nodeval[$n]} 1>&2
         done
-        for n in $(seq $meta) ; do
+        for (( ; $meta > 0 ; meta-- )) ; do
             read val
 #echo "meta $val ${nodeval[$val]}" 1>&2
             sum=$((${nodeval[$val]} + $sum))
@@ -30,8 +29,4 @@ parse() {
     echo $sum
 }
 
-echo $(($(
-for x in $(cat $f) ; do
-    echo $x
-done | parse
-)+0))
+tr ' ' '\n' < $f | parse
