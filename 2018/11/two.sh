@@ -1,16 +1,25 @@
 #! /bin/bash
 
+# Bash arrays start to get a bit slow with 90k elements, so this takes a few
+# seconds per iteration (total runtime ~20min)
+
+# The algorithm is O(N^3) - Each of N square sizes requires and O(1) pass over
+# the N*N area.  In practice larger squares require less work, so it speeds up
+# towards the end
+
 serial=9005
 #serial=18
 
 max=0
 
-declare -A power
+declare -A power total
 
 calc() {
   rack=$(($1 + 10))
   p1=$(( ($rack * $2 + $serial) * $rack))
-  power[$1:$2]=$(( ($p1 % 1000) / 100 - 5))
+  val=$(( ($p1 % 1000) / 100 - 5))
+  power[$1:$2]=$val
+  total[$1:$2]=$val
 }
 
 for ((y=1 ; $y <= 300 ; y++)) ; do
@@ -19,43 +28,44 @@ for ((y=1 ; $y <= 300 ; y++)) ; do
   done
 done
 
-power() {
-  result=${table[$1:$2]}
-}
-
 loop() {
-  start=0
-  limit=$((300 - $size))
-  for ((y=1 ; $y <= $size ; y++)) ; do
-    for ((x=1 ; $x <= $size ; x++)) ; do
-      start=$(($start + ${power[$x:$y]}))
+  limit=$((301 - $size))
+  for ((x=1 ; $x <= $limit ; x++)) ; do
+    sum=0
+    nx=$(($x+$size-1))
+    for ((ny=1 ; $ny < $size; ny++)); do
+      sum=$(($sum + ${power[$nx:$ny]}))
+    done
+    for ((y=1 ; $y <= $limit ; y++)) ; do
+      e="$x:$y"
+      total[$e]=$((${total[$e]} + $sum))
+      #echo $e $nx:$ny
+      sum=$(($sum + ${power[$nx:$ny]} - ${power[$nx:$y]}))
+      ny=$(($ny+1))
     done
   done
-
   for ((y=1 ; $y <= $limit ; y++)) ; do
-    sum=$start
-    for ((x=1 ; $x <= $limit ; x++)) ; do
-      if [ $sum -gt $max ] ; then
-        max=$sum
+    sum=0
+    ny=$(($y+$size-1))
+    for ((nx=1 ; $nx <= $size; nx++)); do
+      sum=$(($sum + ${power[$nx:$ny]}))
+    done
+    for ((x=1; $x <= $limit ; x++)) ; do
+      e="$x:$y"
+      val=$((${total[$e]} + $sum))
+      total[$e]=$val
+      if [ $val -gt $max ] ; then
+        max=$val
         best="$x,$y,$size"
         echo $best $max
       fi
-      for ((n=0 ; $n < $size; n++)) ; do
-        sum=$(($sum + ${power[$(($x + $size)):$(($y + $n))]} - ${power[$x:$(($y + $n))]}))
-      done
-    done
-    if [ $sum -gt $max ] ; then
-      max=$sum
-      best="$x,$y,$size"
-      echo $best $max
-    fi
-    for ((n=1 ; $n <= $size; n++)) ; do
-      start=$(($start + ${power[$n:$(($y + $size))]} - ${power[$n:$y]}))
+      sum=$(($sum + ${power[$nx:$ny]} - ${power[$x:$ny]}))
+      nx=$(($nx+1))
     done
   done
 }
 
-for ((size=1 ; $size < 300 ; size++)) ; do
+for ((size=2 ; $size < 300 ; size++)) ; do
   echo "#$size $(date)"
   loop
 done
