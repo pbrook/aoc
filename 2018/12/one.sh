@@ -29,7 +29,7 @@ eval "do_match() {
   esac
 }"
 
-for ((gen=1;gen<=10000;gen++)) ; do
+for ((gen=1;gen<=20;gen++)) ; do
   src="....${state%....}...."
   state=""
   ((offset-=2))
