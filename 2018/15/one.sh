@@ -1,7 +1,7 @@
 #! /bin/bash
 
 f=input.txt
-#f=small.txt
+#f=small6.txt
 
 wd=/tmp/aoc15
 rm -rf $wd
@@ -22,7 +22,7 @@ render() {
   local x y c n
   echo "round:$round G:${type_count['G']} E:${type_count['E']}"
   for ((n=0;n<thing_count;n++)) ; do
-:    echo "$n ${thing_type[n]} ${thing_x[n]}:${thing_y[n]} ${thing_hp[n]}"
+    echo "$n ${thing_type[n]} ${thing_x[n]}:${thing_y[n]} ${thing_hp[n]}"
   done
   for ((y=0;y<height;y++)) ; do
     for ((x=0;x<width;x++)) ; do
@@ -33,7 +33,9 @@ render() {
 }
 
 win() {
+  ((round--))
   echo "Ended after $round rounds"
+  render
   hp=0
   for ((n=0;n<thing_count;n++)) ; do
     if ((thing_hp[n] > 0)) ; then
@@ -45,34 +47,43 @@ win() {
   exit 0
 }
 
-attack() {
+attack_scan() {
   local x=$1 y=$2 n
   if [ "${grid[$x:$y]}" = $other_thing ] ; then
     for ((n=0;n<thing_count;n++)) ; do
       if (( (thing_x[n] == x) && (thing_y[n] == y) && thing_hp[n] > 0)) ; then
-        ((thing_hp[n] -= 3))
-        if ((thing_hp[n] <= 0)) ; then
-          moved=1
-          recalc=1
-          grid[$x:$y]='.'
-          ((type_count[$other_thing]--))
-          if ((type_count[$other_thing] == 0)) ; then
-            win
-          fi
+        if ((thing_hp[n] < attack_hp)) ; then
+          attack_hp=${thing_hp[n]}
+          attack_id=$n
+          attack_loc=$x:$y
         fi
       fi
     done
-    return 0
   fi
-  return 1
 }
 
 try_attack() {
-  attack $((x+1)) $y && return 0
-  attack $((x-1)) $y && return 0
-  attack $x $((y+1)) && return 0
-  attack $x $((y-1)) && return 0
-  return 1
+  attack_hp=999
+  attack_id=
+  if ((type_count[$other_thing] == 0)) ; then
+    win
+  fi
+  attack_scan $x $((y-1))
+  attack_scan $((x-1)) $y
+  attack_scan $((x+1)) $y
+  attack_scan $x $((y+1))
+  if [ -z "$attack_id" ] ; then
+    return 1
+  fi
+#echo "Attacking $attack_id"
+  ((thing_hp[attack_id] -= 3))
+  if ((thing_hp[attack_id] <= 0)) ; then
+    moved=1
+    recalc=1
+    grid[$attack_loc]='.'
+    ((type_count[$other_thing]--))
+  fi
+  return 0
 }
 
 is_loc() {
@@ -160,6 +171,7 @@ move() {
     y=$flood_y
     thing_x[id]=$x
     thing_y[id]=$y
+#echo "moving to $x:$y"
   fi
 }
 
@@ -186,10 +198,12 @@ run_step() {
   moved=0
   for ((n=0;n<thing_count;n++)) ; do
     if ((thing_hp[n] > 0)) ; then
-      echo ${thing_x[n]} ${thing_y[n]} $n
+      printf "%03d %03d %d\n" ${thing_y[n]} ${thing_x[n]} $n
+      #echo ${thing_x[n]} ${thing_y[n]} $n
     fi
-  done | sort -n > $wd/order
-  while read x y id ; do
+  done | sort > $wd/order
+  while read y x id ; do
+    ((x=10#$x,y=10#$y))
     run_thing
   done < $wd/order
   recalc=$moved
