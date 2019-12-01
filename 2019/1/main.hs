@@ -1,14 +1,21 @@
 import System.IO
 
-moduleFuel :: Int -> Int
-
-moduleFuel mass = (mass `div` 3) - 2
-
-hMain lines = sum (map moduleFuel lines)
-
 parse = (map read) . lines
 
+moduleFuel :: Int -> Int
+moduleFuel mass = (mass `div` 3) - 2
+
+part1 modules = sum (map moduleFuel modules)
+
+recursiveFuel x
+    | fuel <= 0 = 0
+    | otherwise = fuel + recursiveFuel fuel
+    where fuel = moduleFuel x
+
+part2 modules = sum (map recursiveFuel modules)
+
 main = do
-    input <- readFile "input"
-    let result = hMain (parse input)
-    print result
+    raw <- readFile "input"
+    let input = parse raw
+    print $ part1 input
+    print $ part2 input
