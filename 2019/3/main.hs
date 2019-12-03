@@ -3,10 +3,9 @@ import qualified Data.Text.IO as T.IO
 
 -- Could have separate up/down/left/right instances, but not worth the pain
 data Direction = Direction Char Int
-data Point = Point Int Int deriving Show
--- The origin of a segment is the top/left end
--- The end of one segment will overlap with the start of the next
--- This allows us to ignore segment direction
+-- Point holds x, y and wire length
+data Point = Point Int Int Int deriving Show
+-- Segment is a starting point and a length (may be negative)
 data Segment = Vertical Point Int | Horizontal Point Int deriving Show
 
 
@@ -19,33 +18,39 @@ parseLine = (map parseDirection) . (T.splitOn (T.singleton ','))
 parse :: T.Text -> [[Direction]]
 parse = (map parseLine) . T.lines
 
-makeSegments :: Int -> Int -> [Direction] -> [Segment]
-makeSegments _ _ [] = []
-makeSegments x y ((Direction 'U' w):rest) =
-    (Vertical (Point x (y - w)) (w + 1))
-    :makeSegments x (y - w) rest
-makeSegments x y ((Direction 'D' w):rest) =
-    (Vertical (Point x y) (w + 1))
-    :makeSegments x (y + w) rest
-makeSegments x y ((Direction 'L' w):rest) =
-    (Horizontal (Point (x - w) y) (w + 1))
-    :makeSegments (x - w) y rest
-makeSegments x y ((Direction 'R' w):rest) =
-    (Horizontal (Point x y) (w + 1))
-    :makeSegments (x + w) y rest
+makeSegments :: Point -> [Direction] -> [Segment]
+makeSegments _ [] = []
+makeSegments start@(Point x y d) ((Direction p w):rest)
+    | p == 'U' = (Vertical start (-w))
+        :makeSegments (Point x (y - w) d') rest
+    | p == 'D' = (Vertical start w)
+        :makeSegments (Point x (y + w) d') rest
+    | p == 'L' = (Horizontal start (-w))
+        :makeSegments (Point (x - w) y d') rest
+    | p == 'R' = (Horizontal start w)
+        :makeSegments (Point (x + w) y d') rest
+    where
+        d' = d + w
 
-intersectOne :: Segment -> Segment -> Maybe Point
 -- We assume we can ignore collinear segments
 -- Our overlapping segment ends will hide this bug in many cases
+-- We could fix this by returning [Point] and using concatMap
+-- instead of comprehension pattern matching in intersectList
+intersectOne :: Segment -> Segment -> Maybe Point
 intersectOne (Vertical _ _) (Vertical _ _) = Nothing
 intersectOne (Horizontal _ _) (Horizontal _ _) = Nothing
 intersectOne a@(Horizontal _ _) b@(Vertical _ _) = intersectOne b a
-intersectOne (Vertical (Point x1 y1) w1) (Horizontal (Point x2 y2) w2)
-    | x1 < x2 = Nothing
-    | x1 > (x2 + w2) = Nothing
-    | y2 < y1 = Nothing
-    | y2 > (y1 + w1) = Nothing
-    | otherwise = Just (Point x1 y2)
+intersectOne (Vertical (Point x1 y1 d1) w1) (Horizontal (Point x2 y2 d2) w2)
+    | x1 < left = Nothing
+    | x1 > right = Nothing
+    | y2 < top = Nothing
+    | y2 > bottom = Nothing
+    | otherwise = Just (Point x1 y2 (d1 + d2 + abs (y1 - y2) + abs (x2 - x1)))
+    where
+        top = min y1 (y1 + w1)
+        bottom = max y1 (y1 + w1)
+        left = min x2 (x2 + w2)
+        right = max x2 (x2 + w2)
 
 
 intersectList :: [Segment] -> Segment -> [Point]
@@ -55,18 +60,24 @@ intersect :: [[Segment]] -> [Point]
 intersect [a, b] = concatMap (intersectList a) b
 
 manhattan :: Point -> Int
-manhattan (Point x y) = (abs x) + (abs y)
+manhattan (Point x y d) = (abs x) + (abs y)
 
-validDistance :: [Point] -> [Int]
-validDistance = filter (/= 0) . map manhattan
-
-part1 input = let
-        segments = map (makeSegments 0 0) input
+findBest :: (Point -> Int) -> [[Direction]] -> Int
+findBest distFn input = let
+        segments = map (makeSegments (Point 0 0 0)) input
         points = intersect segments
-        distance = validDistance points
-    in foldr1 min distance
+        distance = map distFn points
+    in foldr1 min (filter (/= 0) distance)
+
+part1 = findBest manhattan
+
+wireLength :: Point -> Int
+wireLength (Point x y d) = d
+
+part2 = findBest wireLength
 
 main = do
     raw <- T.IO.readFile "input"
     let input = parse raw
     print $ part1 input
+    print $ part2 input
