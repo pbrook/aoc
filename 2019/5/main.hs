@@ -11,6 +11,7 @@ data Machine = Machine {
     mOutput :: [Int],
     mTrace :: [MachineOp]}
 data MachineOp = IncPC Int
+    | Jump Int
     | MemWrite Int Int
     | PopInput
     | PushOutput Int
@@ -18,6 +19,15 @@ data MachineOp = IncPC Int
 
 parse :: T.Text -> [Int]
 parse = (map (read . T.unpack)) . (T.splitOn (T.singleton ','))
+
+writeback :: Machine -> MachineOp -> Machine
+writeback m@(Machine{mPC = pc}) (IncPC n) = m {mPC = pc + n}
+writeback m@(Machine{mPC = pc}) (Jump x) = m {mPC = x}
+writeback m@(Machine{mMemory = mem}) (MemWrite dest val) = m {mMemory = mem // [(dest, val)]}
+writeback m@(Machine{mInput=inp}) PopInput = m {mInput = tail inp}
+writeback m@(Machine{mOutput=out}) (PushOutput val) = m {mOutput = val:out}
+
+trace m@(Machine{mTrace=log}) op = writeback (m {mTrace=op:log}) op
 
 argType :: Int -> Int -> Int
 argType op 1 = (op `div` 100) `mod` 10
@@ -30,14 +40,6 @@ getArg (Machine {mMemory=mem, mPC=pc}) n = let
     in case argType op n of
         0 -> mem ! imm
         1 -> imm
-
-writeback :: Machine -> MachineOp -> Machine
-writeback m@(Machine{mPC = pc}) (IncPC n) = m {mPC = pc + n}
-writeback m@(Machine{mMemory = mem}) (MemWrite dest val) = m {mMemory = mem // [(dest, val)]}
-writeback m@(Machine{mInput=inp}) PopInput = m {mInput = tail inp}
-writeback m@(Machine{mOutput=out}) (PushOutput val) = m {mOutput = val:out}
-
-trace m@(Machine{mTrace=log}) op = writeback (m {mTrace=op:log}) op
 
 opWrite :: Machine -> Int -> Int -> MachineOp
 opWrite (Machine {mPC=pc, mMemory=mem}) n val = let
@@ -60,6 +62,14 @@ opOutput m@(Machine {mInput=input}) = let
         val = getArg m 1
     in [(PushOutput val), (IncPC 2)]
 
+opJump :: Machine -> (Int -> Bool) -> [MachineOp]
+opJump m cond = let
+        val = getArg m 1
+        addr = getArg m 2
+    in if cond val
+    then [Jump addr]
+    else [IncPC 3]
+
 run :: Machine -> Machine
 run m@(Machine {mPC=pc, mMemory=mem}) = let
         op = mem ! pc
@@ -68,6 +78,10 @@ run m@(Machine {mPC=pc, mMemory=mem}) = let
             2 -> opBinary m (*)
             3 -> opInput m
             4 -> opOutput m
+            5 -> opJump m (/=0)
+            6 -> opJump m (==0)
+            7 -> opBinary m (\x y -> if x < y then 1 else 0)
+            8 -> opBinary m (\x y -> if x == y then 1 else 0)
             _ -> []
     in case mop of
         [] -> m
@@ -79,14 +93,14 @@ runMachine mem inp = let
         end = run start
     in end
 
---part1 mem = reverse (mTrace (runMachine mem [1]))
 part1 mem = mOutput (runMachine mem [1])
 
---part2 mem result = head [100 * noun + verb | noun <- indices mem, verb <- indices mem, patchRun mem noun verb == result]
+part2 mem = mOutput (runMachine mem [5])
+--part2 mem = reverse $ mTrace (runMachine mem [5])
 
 main = do
     raw <- T.IO.readFile "input"
     let input = parse raw
         mem = listArray (0, (length input) - 1) input
     print $ part1 mem
-    --print $ part2 mem 19690720
+    print $ part2 mem
