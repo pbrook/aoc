@@ -5,11 +5,13 @@ import Data.List
 
 type Memory = Array Int Int
 
+data MachineState = Running | Output Int | Stopped
+
 data Machine = Machine {
     mPC :: Int,
     mMemory :: Memory,
     mInput :: [Int],
-    mOutput :: [Int],
+    mState :: MachineState,
     mTrace :: [MachineOp]}
 
 data MachineOp = IncPC Int
@@ -17,6 +19,7 @@ data MachineOp = IncPC Int
     | MemWrite Int Int
     | PopInput
     | PushOutput Int
+    | Stop
     deriving Show
 
 parse :: T.Text -> [Int]
@@ -27,14 +30,15 @@ writeback m@(Machine{mPC = pc}) (IncPC n) = m {mPC = pc + n}
 writeback m@(Machine{mPC = pc}) (Jump x) = m {mPC = x}
 writeback m@(Machine{mMemory = mem}) (MemWrite dest val) = m {mMemory = mem // [(dest, val)]}
 writeback m@(Machine{mInput=inp}) PopInput = m {mInput = tail inp}
-writeback m@(Machine{mOutput=out}) (PushOutput val) = m {mOutput = val:out}
+writeback m (PushOutput val) = m {mState = (Output val)}
+writeback m Stop = m {mState = Stopped}
 
 trace m@(Machine{mTrace=log}) op = writeback (m {mTrace=op:log}) op
 
 argType :: Int -> Int -> Int
 argType op 1 = (op `div` 100) `mod` 10
 argType op 2 = (op `div` 1000) `mod` 10
-    
+
 getArg :: Machine -> Int -> Int
 getArg (Machine {mMemory=mem, mPC=pc}) n = let
         op = mem ! pc
@@ -72,8 +76,8 @@ opJump m cond = let
     then [Jump addr]
     else [IncPC 3]
 
-run :: Machine -> Machine
-run m@(Machine {mPC=pc, mMemory=mem}) = let
+step :: Machine -> (Machine, Maybe Int)
+step m@(Machine {mPC=pc, mMemory=mem}) = let
         op = mem ! pc
         mop = case op `mod` 100 of
             1 -> opBinary m (+)
@@ -84,28 +88,56 @@ run m@(Machine {mPC=pc, mMemory=mem}) = let
             6 -> opJump m (==0)
             7 -> opBinary m (\x y -> if x < y then 1 else 0)
             8 -> opBinary m (\x y -> if x == y then 1 else 0)
-            _ -> []
-    in case mop of
-        [] -> m
-        _ -> run (foldl trace m mop)
+            _ -> [Stop]
+        m' = foldl trace (m {mState = Running}) mop
+    in case mState m' of
+        Running -> step m'
+        Output val -> (m', Just val)
+        Stopped -> (m', Nothing)
 
-runMachine :: Memory -> [Int] -> Machine
+pushInput :: Machine -> Int -> Machine
+pushInput m@(Machine {mInput=i}) val = m {mInput = i ++ [val]}
+
+newMachine :: Memory -> [Int] -> Machine
+newMachine mem inp = Machine {mMemory=mem, mPC=0, mInput=inp, mTrace=[], mState=Running}
+
+runMachine :: Memory -> [Int] -> Int
 runMachine mem inp = let
-        start = Machine {mMemory=mem, mPC=0, mInput=inp, mOutput=[], mTrace=[]}
-        end = run start
-    in end
+        start = newMachine mem inp
+        (end, Just out) = step start
+    in out
 
 runPhase :: Memory -> Int -> [Int] -> Int
 runPhase mem val [] = val
 runPhase mem val (phase:ps) = let
-        m = runMachine mem [phase, val]
-        next = head (mOutput m)
+        next = runMachine mem [phase, val]
     in runPhase mem next ps
 
 part1 mem = maximum (map (runPhase mem 0) (permutations [0..4]))
+
+runAmp :: [Machine] -> Int -> Int
+--runAmp :: [Machine] -> Int -> [(Int, [MachineOp])]
+runAmp (a:ax) val = let
+        (a', res) = step (pushInput a val)
+    in case res of
+        Nothing -> val
+        Just newval -> runAmp (ax ++ [a']) newval
+{-
+        Nothing -> [(val, [])]
+        Just newval -> (val, reverse $ mTrace a'):(runAmp (ax ++ [a']) newval)
+-}
+
+runPhase2 :: Memory -> [Int] -> Int
+runPhase2 mem phase = let
+        amps = map (\x -> newMachine mem [x]) phase
+    in runAmp amps 0
+
+--part2 mem = runPhase2 mem [5..9]
+part2 mem = maximum (map (runPhase2 mem) (permutations [5..9]))
 
 main = do
     raw <- T.IO.readFile "input"
     let input = parse raw
         mem = listArray (0, (length input) - 1) input
     print $ part1 mem
+    print $ part2 mem
