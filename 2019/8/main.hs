@@ -22,8 +22,30 @@ part1 layers = let
         (x0, x1, x2) = foldl1 best c
     in x1 * x2
 
+flatten :: [Char] -> [Char] -> [Char]
+flatten [] [] = []
+flatten (x:xs) (y:ys) =
+    (if x /= '2' then x else y):(flatten xs ys)
+
+pixelate :: Char -> Char
+pixelate '0' = ' '
+pixelate '1' = 'X'
+pixelate '2' = '?'
+pixelate c = c
+
+rectangle :: Int -> String -> String
+rectangle _ [] = []
+rectangle w s = let
+        (a, b) = splitAt w s
+    in a ++ ('\n':rectangle w b)
+
+part2 layers = let
+        num = foldl1 flatten layers
+        s = map pixelate num
+    in rectangle 25 s
 
 main = do
     raw <- readFile "input"
     let input = parse (25 * 6) (filter (not . isSpace) raw)
     print $ part1 input
+    putStr $ part2 input
