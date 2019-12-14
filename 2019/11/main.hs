@@ -162,6 +162,16 @@ part1 mem = let
         (m, px) = runPainter (newMachine mem []) (BotPos (Point 0 0) 0) []
     in length (nub (map (\(Pixel p _) -> p) px))
 
+render :: Int -> Char
+render 0 = '.'
+render 1 = '#'
+
+part2 mem = let
+        (m, px) = runPainter (newMachine mem []) (BotPos (Point 0 0) 0) [Pixel (Point 0 0) 1]
+        w = maximum (map (\(Pixel (Point x _) _) -> x) px)
+        h = maximum (map (\(Pixel (Point _ y) _) -> y) px)
+    in intercalate "\n" [[render (findPixel (Point x y) px) | x <- [0..w]] | y <- [0..h]]
+
 main = do
     raw <- T.IO.readFile "input"
     let input = parse raw
@@ -169,3 +179,4 @@ main = do
         extraMem = 640
         mem = listArray (0, (length input) + extraMem - 1) (input ++ (repeat 0))
     print $ part1 mem
+    putStrLn $ part2 mem
