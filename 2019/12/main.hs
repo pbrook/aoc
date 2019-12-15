@@ -1,41 +1,55 @@
 import System.IO
 import Data.List
 import Data.Char
+import Data.Maybe
 
-data Moon = Moon [Int] [Int] deriving Show
+data PV = PV Int Int deriving (Eq,Show)
 
---parsePlanet :: String -> Planet
-parseMoon s = let
+parseCoord s = let
         s' = filter (\c -> c == ' ' || isDigit c || c == '-') s
         (x, _:xs) = break (==' ') s'
         (y, _:z) = break (==' ') xs
-    in Moon (map read [x,y, z]) [0,0,0]
+    in map read [x,y,z]
 
-parse = (map parseMoon) . lines
+parse = (map (map (\p -> PV p 0))) . transpose . (map parseCoord) . lines
 
-addGravity :: [Moon] -> Moon
-addGravity [m] = m
-addGravity ((Moon p v):(Moon op _):ms) = let
-        m = Moon p (map (\(a, b, c) -> a + signum (c - b)) (zip3 v p op))
-    in addGravity (m:ms)
 
-move :: Moon -> Moon
-move (Moon p v) = Moon (map (\(a, b) -> a + b) (zip p v)) v
+simulate :: [PV] -> PV
+simulate ((PV p v):rest) = let
+        v' = v + sum [signum (op - p) | (PV op _) <- rest]
+        p' = p + v'
+    in (PV p' v')
 
-iterMoon :: [Moon] -> [Moon] -> [[Moon]]
-iterMoon xs [y] = [y:xs]
-iterMoon xs (y:ys) = (y:(xs++ys)):iterMoon (y:xs) ys
+iterAll :: [a] -> [a] -> [[a]]
+iterAll xs [y] = [y:xs]
+iterAll xs (y:ys) = (y:(xs++ys)):iterAll (y:xs) ys
 
-timestep :: [Moon] -> [Moon]
-timestep m = map (move.addGravity) (iterMoon [] m)
+timestep :: [PV] -> [PV]
+timestep pv = map simulate (iterAll [] pv)
 
-energy :: Moon -> Int
-energy (Moon p v) = (asum p) * (asum v)
-    where asum = sum.(map abs)
+asum :: [Int] -> Int
+asum = sum . (map abs)
 
-part1 m = sum $ map energy ((iterate timestep m) !! 1000)
+energy :: [PV] -> Int
+energy pv = let
+        pe = asum (map (\(PV p _) -> p) pv)
+        ke = asum (map (\(PV _ v) -> v) pv)
+    in pe * ke
+
+part1 s = let
+        s' = (iterate (map timestep) s) !! 100
+    in sum (map energy (transpose s'))
+
+findCycle :: [PV] -> Int
+findCycle pv = (fromJust $ elemIndex pv (tail (iterate timestep pv))) + 1
+
+part2 s = let
+        c = map findCycle s
+        n = foldl1 lcm c
+    in n
 
 main = do
     raw <- readFile "input"
     let input = parse raw
     print $ part1 input
+    print $ part2 input
