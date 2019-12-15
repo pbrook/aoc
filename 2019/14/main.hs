@@ -1,3 +1,4 @@
+-- Part2 assumes a 64-bit Int
 import System.IO
 import Data.List
 import Data.Maybe
@@ -62,10 +63,25 @@ satisfy r nd de = let
         newDe = de' ++ (map (\(Thing tc tn) -> Thing (tc * nr) tn) o)
     in satisfy r nd' newDe
 
-oreNeeded (Input r nd) n = 
+oreNeeded :: Input -> Int -> Int
+oreNeeded (Input r nd) n =
     satisfy r nd [Thing n "FUEL"]
 
 part1 inp = oreNeeded inp 1
+
+trillion = 1000000 * 1000000
+
+binSearch :: Input -> Int -> Int -> Int
+binSearch inp low high 
+    | low == high = low
+    | otherwise = let
+            mid = (low + high + 1) `div` 2
+            ore = oreNeeded inp mid
+        in case ore `compare` trillion of
+            GT -> binSearch inp low (mid-1)
+            otherwise -> binSearch inp mid high
+
+part2 inp = binSearch inp 1 trillion
 
 main = do
     raw <- readFile "input"
@@ -73,3 +89,4 @@ main = do
         r = parse raw
         inp = buildInput r
     print $ part1 inp
+    print $ part2 inp
