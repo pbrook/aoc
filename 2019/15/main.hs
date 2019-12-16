@@ -142,72 +142,60 @@ data Point = Point Int Int deriving (Show,Eq)
 data Tile = Tile Point Int deriving Show
 
 seenTile :: [Tile] -> Point -> Bool
-seenTile map p@(Point x y) = isJust (find (\(Tile tp _) -> p == tp) map)
+seenTile ts p@(Point x y) = any (\(Tile tp _) -> p == tp) ts
 
 searchStep :: Machine -> Point -> [Tile] -> Int -> [Tile]
-searchStep m (Point x y) map dir = let
+searchStep m (Point x y) ts dir = let
         p = case dir of
             1 -> Point x (y-1)
             2 -> Point x (y+1)
             3 -> Point (x-1) y
             4 -> Point (x+1) y
-    in if seenTile map p then map
+    in if seenTile ts p then ts
     else let
         (m', Output result) = step (pushInput m dir)
     --in case trace (show (result, dir, p)) result of
     in case result of
-        0 -> (Tile p 1):map
-        1 -> search m' p ((Tile p 0):map)
-        2 -> (Tile p 2):map
+        0 -> (Tile p 1):ts
+        1 -> search m' p ((Tile p 0):ts)
+        2 -> (Tile p 2):ts
 
 search :: Machine -> Point -> [Tile] -> [Tile]
-search m p map 
+search m p ts
     -- | trace (show p) False = undefined
     | otherwise = let
-        x1 = searchStep m p map 1
+        x1 = searchStep m p ts 1
         x2 = searchStep m p x1 2
         x3 = searchStep m p x2 3
         x4 = searchStep m p x3 4
     in x4
 
-nextTo :: Point -> Tile -> Bool
-nextTo (Point px py) (Tile (Point tx ty) _)
+nextTo :: Point -> Point -> Bool
+nextTo (Point px py) (Point tx ty)
     | px /= tx && py /= ty = False
     | px == tx + 1 || px == tx - 1 = True
     | py == ty + 1 || py == ty - 1 = True
     | otherwise = False
 
-bestResult :: [Int] -> Maybe Int
-bestResult [] = Nothing
-bestResult x = Just (minimum x)
+nearAny :: [Point] -> Point -> Bool
+nearAny ps t = any (nextTo t) ps
 
-walk :: [Tile] -> Int -> Point -> Maybe Int
-walk path steps p = let
-        (near, far) = partition (nextTo p) path
-    in case find (\(Tile _ c) -> c == 2) near of
-        Just _ -> Just steps
-        Nothing -> let
-                p' = map (\(Tile p _) -> p) near
-                r = map (walk far (steps+1)) p'
-            in bestResult (catMaybes r)
+isOrigin :: [Point] -> Bool
+isOrigin = any (== (Point 0 0))
 
-part1 path = fromJust (walk path 1 (Point 0 0))
-
-nearAny :: [Point] -> Tile -> Bool
-nearAny ps t = any (\p -> nextTo p t) ps
-
-walkO2 :: [Tile] -> Int -> [Point] -> Int
-walkO2 path steps p = let
+walk :: ([Point] -> Bool) -> [Point] -> Int -> [Point] -> Int
+walk cond path steps p = let
         (near, far) = partition (nearAny p) path
-    in case near of
-        [] -> steps
-        _ -> let
-                p' = map (\(Tile p _) -> p) near
-            in walkO2 far (steps+1) p'
+    in case cond near of
+        True -> steps
+        False -> walk cond far (steps+1) near
 
-part2 path = let
-        (Tile start _) = fromJust (find (\(Tile _ c) -> c == 2) path)
-    in walkO2 path 0 [start]
+part1 path oxy = walk isOrigin path 1 [oxy]
+
+isEmpty [] = True
+isEmpty _ = False
+
+part2 path oxy = walk isEmpty path 0 [oxy]
 
 main = do
     raw <- T.IO.readFile "input"
@@ -217,7 +205,8 @@ main = do
         mem = listArray (0, (length input) + extraMem - 1) (input ++ (repeat 0))
         m = newMachine mem []
         start = Point 0 0
-        map = search m start [Tile start 0]
-        path = filter (\(Tile _ n) -> n /= 1) map
-    print $ part1 path
-    print $ part2 path
+        ts = search m start [Tile start 0]
+        path = [p | (Tile p n) <- ts, n == 0]
+        Just (Tile oxy _) = find (\(Tile _ n) -> n == 2) ts
+    print $ part1 path oxy
+    print $ part2 path oxy
