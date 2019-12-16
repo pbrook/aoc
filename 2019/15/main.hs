@@ -191,12 +191,23 @@ walk path steps p = let
                 r = map (walk far (steps+1)) p'
             in bestResult (catMaybes r)
 
-part1 mem = let
-        m = newMachine mem []
-        start = Point 0 0
-        map = search m start [Tile start 0]
-        path = filter (\(Tile _ n) -> n /= 1) map
-    in fromJust (walk path 1 (Point 0 0))
+part1 path = fromJust (walk path 1 (Point 0 0))
+
+nearAny :: [Point] -> Tile -> Bool
+nearAny ps t = any (\p -> nextTo p t) ps
+
+walkO2 :: [Tile] -> Int -> [Point] -> Int
+walkO2 path steps p = let
+        (near, far) = partition (nearAny p) path
+    in case near of
+        [] -> steps
+        _ -> let
+                p' = map (\(Tile p _) -> p) near
+            in walkO2 far (steps+1) p'
+
+part2 path = let
+        (Tile start _) = fromJust (find (\(Tile _ c) -> c == 2) path)
+    in walkO2 path 0 [start]
 
 main = do
     raw <- T.IO.readFile "input"
@@ -204,4 +215,9 @@ main = do
         -- 640 memory locations should be enough for anyone!
         extraMem = 640
         mem = listArray (0, (length input) + extraMem - 1) (input ++ (repeat 0))
-    print $ part1 mem
+        m = newMachine mem []
+        start = Point 0 0
+        map = search m start [Tile start 0]
+        path = filter (\(Tile _ n) -> n /= 1) map
+    print $ part1 path
+    print $ part2 path
