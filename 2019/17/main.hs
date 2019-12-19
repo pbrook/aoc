@@ -3,6 +3,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T.IO
 import Data.Array
 import Data.List
+import Data.Maybe
 import Data.Char
 
 import Debug.Trace
@@ -138,35 +139,27 @@ newMachine mem inp = Machine {
     mTrace=[],
     mState=Running}
 
-runMachine :: Machine -> String
+runMachine :: Machine -> [Int]
 runMachine m = let
         (m', state) = step m
     in case state of
         Stopped -> []
-        Output val -> (chr val):(runMachine m')
-
-pad' :: a -> [a] -> [a]
-pad' a b = (a:b) ++ [a]
-
-pad :: [String] -> [String]
-pad grid = let
-        len = 2 + length (head grid)
-        blank = replicate len '.'
-    in pad' blank (map (pad' '.') grid)
+        Output val -> val:(runMachine m')
 
 data Point = Point Int Int deriving Show
+type Grid = [[Char]]
+type Step = String
 
 cons3 a b c = [a, b, c]
 
-findCross' :: Point -> [String] -> [Point]
+findCross' :: Point -> Grid -> [Point]
 findCross' _ [_, _] = []
 findCross' p@(Point x y) (a:b:c:xs)
     | a == ".#." && b == "###" && c == ".#." = p:rest
     | otherwise = rest
     where rest = findCross' (Point (x+1) y) (b:c:xs)
-        
 
-findCross :: Int -> [String] -> [Point]
+findCross :: Int -> Grid -> [Point]
 findCross _ [_, _] = []
 findCross y (a:b:c:xs) = let
         p = findCross' (Point 1 y) (zipWith3 cons3 a b c)
@@ -175,12 +168,128 @@ findCross y (a:b:c:xs) = let
 alignment :: Point -> Int
 alignment (Point x y) = x * y
 
-part1 mem = let
-        m = newMachine mem []
-        out = lines (runMachine m)
-        grid = id (filter (/= "") out)
+part1 grid = let
         p = findCross 1 grid
     in sum (map alignment p)
+
+
+-- Turning left rotates the grid right, and vice-versa
+rotateGrid :: Char -> Grid -> Grid
+rotateGrid 'L' = transpose.reverse
+rotateGrid 'R' = reverse.transpose
+
+rotatePos :: Char -> Grid -> (Int, Int) -> Int -> (Int, Int)
+rotatePos 'L' g (x,y) n = let
+        h = length g
+        x' = h - (y + 1)
+        y' = x - n
+    in (x', y')
+rotatePos 'R' g (x,y) n = let
+        w = length (head g)
+        x' = y
+        y' = w - (x + 1 + n)
+    in (x', y')
+
+
+move :: Char -> Grid -> (Int, Int) -> Int -> [Step]
+move turn grid p@(x,y) n = let
+        s = turn:',':(show n)
+        p' = rotatePos turn grid p n
+        g' = rotateGrid turn grid
+    in s:(advance g' p')
+
+advance :: Grid -> (Int, Int) -> [Step]
+advance grid p@(x,y) = let
+        row = grid !! y
+        l = reverse (take x row)
+        r = drop (x+1) row
+        ln = length (takeWhile (=='#') l)
+        rn = length (takeWhile (== '#') r)
+    in case ln `compare` rn of
+        GT -> move 'L' grid p ln
+        LT -> move 'R' grid p rn
+        EQ -> []
+
+fnLength :: [Step] -> Int
+fnLength s = length (intercalate "," s)
+
+gobble :: Int -> [Step] -> [Step]
+gobble n s = let
+        s' = take n s
+    in if fnLength s' > 20 then [] else s'
+
+munch :: [Step] -> [Step] -> (Int, [Step])
+munch [] s = (0, s)
+munch x s = case stripPrefix x s of
+    Nothing -> (0, s)
+    Just s' -> let
+            (n, s'') = munch x s'
+        in ((1+n), s'')
+
+munchOne (n, s) x = let
+        (n', s') = munch x s
+    in ((n+n'), s')
+
+munchMany :: [[Step]] -> [Step] -> [Step]
+munchMany x s = let
+        (n, s') = foldl munchOne (0, s) x
+    in case n of
+        0 -> s'
+        _ -> munchMany x s'
+
+munchAll :: ([Step], [Step], [Step]) -> [Step] -> Maybe String
+munchAll _ [] = Just []
+munchAll fn@(a, b, c) s = let
+        (na, sa) = munch a s
+        (nb, sb) = munch b sa
+        (nc, sc) = munch c sb
+    in if na + nb + nc == 0 then Nothing
+    else case munchAll fn sc of
+        Nothing -> Nothing
+        Just rest -> Just ((replicate na 'A') ++ (replicate nb 'B') ++ (replicate nc 'C') ++ rest)
+
+try :: [Step] -> (Int, Int, Int) -> Maybe (String, [Step], [Step], [Step])
+try s (a, b, c) = let
+        sa = gobble a s
+        s' = munchMany [sa] s
+        sb = gobble b s'
+        s'' = munchMany [sa, sb] s'
+        sc = gobble c s''
+        r = munchAll (sa, sb, sc) s
+    in case r of
+        Nothing -> Nothing
+        Just p
+            | length p > 10 -> Nothing
+            | otherwise -> Just (p, sa, sb, sc)
+
+optimize s = let
+        paths = [try s (a, b, c) | a <- [1..5] , b <- [1..5] , c <- [1..5]]
+    in head (catMaybes paths)
+
+walk :: Grid -> [Step]
+walk grid = let
+        bxs = map (findIndex (=='^')) grid
+        (Just by) = findIndex isJust bxs
+        bx = head (catMaybes bxs)
+    in advance grid (bx, by)
+
+runBot mem cmd = let
+        mem' = mem // [(0, 2)]
+        inp = map ord cmd
+        m = newMachine mem' inp
+        out = runMachine m
+    in last out
+
+makeCmd :: (String, [Step], [Step], [Step]) -> String
+makeCmd (r, a, b, c) = let
+        r' = intersperse ',' r
+        fn = map (intercalate ",") [a, b, c]
+    in (intercalate "\n" (r':fn)) ++ "\nn\n"
+
+part2 mem grid = let
+        steps = walk grid
+        path = optimize steps
+    in runBot mem (makeCmd path)
 
 main = do
     --f <- readFile "test0"
@@ -189,4 +298,8 @@ main = do
     let input = parse raw
         extraMem = 4096
         mem = listArray (0, (length input) + extraMem - 1) (input ++ (repeat 0))
-    print $ part1 mem
+        m = newMachine mem []
+        out = lines (map chr (runMachine m))
+        grid = filter (/= "") out
+    print $ part1 grid
+    print $ part2 mem grid
