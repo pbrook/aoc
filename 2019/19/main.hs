@@ -149,6 +149,7 @@ testDrone m x y = let
     in case state of
         Output val -> val
 
+{-
 stringify 0 = '.'
 stringify 1 = '#'
 
@@ -156,8 +157,33 @@ render [] = ""
 render g = trace (map stringify (take 50 g)) $ render (drop 50 g)
 
 part1 m = let
-        grid = [testDrone m x y | x <- [0..49] , y <- [0..49]]
-    in sum grid
+        grid = [testDrone m x y | y <- [0..49] , x <- [0..49]]
+    in trace (render grid) $ sum grid
+-}
+
+traceTop :: Machine -> Int -> Int -> [Int]
+traceTop m x y = let
+        v = testDrone m x y
+    in if v == 1 then y:(traceTop m (x+1) y)
+    else traceTop m x (y+1)
+
+traceBot :: Machine -> Int -> Int -> [Int]
+traceBot m x y = let
+        v = testDrone m x y
+    in if v == 0 then (y-1):(traceBot m (x+1) y)
+    else traceBot m x (y+1)
+
+area t b = (min 50 (b + 1)) - (min 50 t)
+
+part1 t b = (sum.take 50) (zipWith area t b)
+
+fitSquare x (t:ts) (b:bs)
+    | b - t >= 99 = (x, t)
+    | otherwise = fitSquare (x+1) ts bs
+
+part2 t b = let
+        (x, y) = fitSquare 0 (drop 99 t) b
+    in x * 10000 + y
 
 main = do
     raw <- T.IO.readFile "input"
@@ -165,4 +191,9 @@ main = do
         extraMem = 100
         mem = listArray (0, (length input) + extraMem - 1) (input ++ (repeat 0))
         (m, state) = step (newMachine mem [])
-    print $ part1 m
+        t = traceTop m 0 0
+        -- Skip over the gaps in the first couple of beam spots
+        b' = traceBot m 2 (t !! 2)
+        b = (take 2 t) ++ b'
+    print $ part1 t b
+    print $ part2 t b
