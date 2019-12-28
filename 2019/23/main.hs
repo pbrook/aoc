@@ -179,13 +179,31 @@ execute c = let
         Nothing -> execute (distPackets 0 c' p)
         Just val -> val
 
-part1 mem = let
-        cluster = map (\n -> newMachine mem [n]) [0..49]
-    in last $ execute cluster
+part1 cluster = last $ execute cluster
+
+insertNat (m:ms) nat = (pushArrayInput m nat):ms
+
+execute2 :: Int -> [Int] -> [Machine] -> Int
+execute2 lasty nat c = let
+        (p, c') = mapAccumL runMachine [] c
+    in case p of
+        [] -> case nat of
+            [] -> execute2 lasty nat c'
+            [x,newy] -> case newy `compare` lasty of
+                EQ -> newy
+                _ -> execute2 newy nat (insertNat c' nat)
+        _ -> let
+                natp = find (\x -> head x == 255) p
+                nn = maybe nat tail natp
+            in execute2 lasty nn (distPackets 0 c' p)
+
+part2 cluster = execute2 0 [] cluster
 
 main = do
     raw <- T.IO.readFile "input"
     let input = parse raw
         extraMem = 100
         mem = listArray (0, (length input) + extraMem - 1) (input ++ (repeat 0))
-    print $ part1 mem
+        cluster = map (\n -> newMachine mem [n]) [0..49]
+    print $ part1 cluster
+    print $ part2 cluster
