@@ -149,16 +149,9 @@ runMachine m = let
         Output val -> val:(runMachine m')
         _ -> []
 
-part1 mem = do
+runScript mem script = do
     let
-        inp = map ord $ unlines [
-            "NOT A J",
-            "NOT B T",
-            "OR T J",
-            "NOT C T",
-            "OR T J",
-            "AND D J",
-            "WALK"]
+        inp = map ord $ unlines script
         m = newMachine mem inp
         out = runMachine m
         d = last out
@@ -171,4 +164,23 @@ main = do
     let input = parse raw
         extraMem = 100
         mem = listArray (0, (length input) + extraMem - 1) (input ++ (repeat 0))
-    part1 mem
+        part1 = [
+            "NOT A J",
+            "NOT B T",
+            "OR T J",
+            "NOT C T",
+            "OR T J",
+            "AND D J",
+            "WALK"]
+        part2 = [
+            "OR A T",
+            "AND B T",
+            "AND C T",
+            "NOT T J",
+            "AND D J",
+            "OR E T",
+            "OR H T",
+            "AND T J",
+            "RUN"]
+    runScript mem part1
+    runScript mem part2
