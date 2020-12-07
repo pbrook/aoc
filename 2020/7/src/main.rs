@@ -9,7 +9,7 @@ use regex::Regex;
 
 struct BagCount {
     name: String,
-    _count: u32,
+    count: u32,
 }
 
 struct Bag {
@@ -24,7 +24,7 @@ fn parse_line(s: String) -> Bag {
     }
     let name = NAME_RE.captures(&s).unwrap()[1].to_string();
     let holds = HOLDS_RE.captures_iter(&s).map(
-        |c| BagCount{_count:c[1].parse::<u32>().unwrap(), name: c[2].to_string()}
+        |c| BagCount{count:c[1].parse::<u32>().unwrap(), name: c[2].to_string()}
         ).collect();
     return Bag{name: name, holds: holds};
 }
@@ -42,12 +42,12 @@ fn part1(v: &Vec<Bag>) -> usize {
     let mut again = true;
     while again {
         again = false;
-        for b in v.iter() {
+        for b in v {
             let outer = &b.name;
             if shiny.contains_key(outer) {
                 continue;
             }
-            for held in b.holds.iter() {
+            for held in &b.holds {
                 if shiny.contains_key(&held.name) {
                     shiny.insert(outer.clone(), ());
                     again = true;
@@ -59,13 +59,46 @@ fn part1(v: &Vec<Bag>) -> usize {
     return shiny.len() - 1;
 }
 
+fn part2(v: &Vec<Bag>) -> u32 {
+    let mut sm: HashMap<String, u32> = HashMap::new();
+    loop {
+        for b in v {
+            let outer = &b.name;
+            if sm.contains_key(outer) {
+                continue;
+            }
+            let mut size: Option<u32> = Some(0);
+
+            for held in &b.holds {
+                let inner = sm.get(&held.name);
+                if inner.is_none() {
+                    size = None;
+                    break;
+                }
+                size = size.map(|n| n + (inner.unwrap() + 1) * held.count);
+            }
+            if size.is_some() {
+                let n = size.unwrap();
+                if outer == "shiny gold" {
+                    return n;
+                }
+                sm.insert(outer.clone(), n);
+            }
+        }
+    }
+}
+
 fn test() {
     let v = parse("test");
     assert_eq!(part1(&v), 4);
+    assert_eq!(part2(&v), 32);
+    let v = parse("test2");
+    assert_eq!(part2(&v), 126);
 }
 
 fn main() {
     test();
     let v = parse("input");
     println!("{}", part1(&v));
+    println!("{}", part2(&v));
 }
