@@ -72,15 +72,11 @@ fn part1(prog: &Vec<Insn>) -> i32 {
 fn part2(prog: &mut Vec<Insn>) -> i32 {
     for n in 0..prog.len() {
         let orig_insn = prog[n];
-        let new_insn = match orig_insn {
+        prog[n] = match orig_insn {
             Insn::NOP(arg) => Insn::JMP(arg),
             Insn::JMP(arg) => Insn::NOP(arg),
-            other => other,
+            _ => continue,
         };
-        if orig_insn == new_insn {
-            continue;
-        }
-        prog[n] = new_insn;
         match run_prog(prog) {
             Ok(acc) => return acc,
             _ => (),
