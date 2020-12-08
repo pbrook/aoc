@@ -1,9 +1,9 @@
 use std::fs::File;
 use std::io::{self, BufRead};
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq,Copy,Clone)]
 enum Insn {
-    NOP(),
+    NOP(i32),
     ACC(i32),
     JMP(i32),
 }
@@ -24,7 +24,7 @@ impl Cpu<'_> {
         //println!("#{} {:?}", self.pc, insn);
         self.pc += 1;
         match insn {
-            Insn::NOP() => (),
+            Insn::NOP(_) => (),
             Insn::ACC(arg) => self.acc += arg,
             Insn::JMP(arg) => self.pc = (self.pc as i32 + arg - 1) as usize,
         }
@@ -34,7 +34,7 @@ impl Cpu<'_> {
 fn parse_line(s: String) -> Insn {
     let arg = s[4..].parse().unwrap();
     match &s[0..3] {
-        "nop" => Insn::NOP(),
+        "nop" => Insn::NOP(arg),
         "acc" => Insn::ACC(arg),
         "jmp" => Insn::JMP(arg),
         bad => panic!("Bad op {}", bad),
@@ -48,24 +48,58 @@ fn parse(filename: &str) -> Vec<Insn> {
 }
 
 
-fn part1(prog: &Vec<Insn>) -> i32 {
+fn run_prog(prog: &Vec<Insn>) -> Result<i32, i32> {
+    let prog_len = prog.len();
     let mut cpu = Cpu::new(prog);
-    let mut seen = vec![false; prog.len()];
+    let mut seen = vec![false; prog_len];
 
-    while !seen[cpu.pc] {
+    loop {
+        if cpu.pc == prog_len {
+            return Ok(cpu.acc);
+        }
+        if seen[cpu.pc] {
+            return Err(cpu.acc);
+        }
         seen[cpu.pc] = true;
         cpu.step();
     }
-    return cpu.acc;
+}
+
+fn part1(prog: &Vec<Insn>) -> i32 {
+    return run_prog(prog).unwrap_err();
+}
+
+fn part2(prog: &mut Vec<Insn>) -> i32 {
+    for n in 0..prog.len() {
+        let orig_insn = prog[n];
+        let new_insn = match orig_insn {
+            Insn::NOP(arg) => Insn::JMP(arg),
+            Insn::JMP(arg) => Insn::NOP(arg),
+            other => other,
+        };
+        if orig_insn == new_insn {
+            continue;
+        }
+        prog[n] = new_insn;
+        match run_prog(prog) {
+            Ok(acc) => return acc,
+            _ => (),
+        }
+        prog[n] = orig_insn;
+    }
+    panic!("Never terminated");
 }
 
 fn test() {
-    let v = parse("test");
+    let mut v = parse("test");
     assert_eq!(part1(&v), 5);
+    assert_eq!(part2(&mut v), 8);
 }
+
 fn main() {
     test();
 
-    let v = parse("input");
+    let mut v = parse("input");
     println!("{}", part1(&v));
+    println!("{}", part2(&mut v));
 }
