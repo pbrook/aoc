@@ -63,6 +63,10 @@ fn part2(v: &Vec<u64>, target: u64) -> u64 {
             Ordering::Greater => {
                 sum -= v[start];
                 start += 1;
+                while (sum - v[end-1]) >= target {
+                    sum -= v[end-1];
+                    end -= 1;
+                }
             },
         }
     }
