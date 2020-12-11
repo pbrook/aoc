@@ -43,19 +43,30 @@ fn parse(filename: &str) -> SeatArray {
 struct Limits {
     w: usize,
     h: usize,
+    part1: bool,
 }
 
-fn count_near(seats: &SeatArray, limits: &Limits, x: usize, y:usize) -> u32 {
+fn count_near(seats: &SeatArray, limits: &Limits, x0: usize, y0: usize) -> u32 {
     let mut count = 0;
-    let x0 = if x > 0 {x-1} else {0};
-    let x1 = if x+1 < limits.w {x+2} else {x+1};
-    let y0 = if y > 0 {y-1} else {0};
-    let y1 = if y+1 < limits.h {y+2} else {y+1};
-    for v in y0..y1 {
-        for u in x0..x1 {
-            if u != x || v != y {
-                if seats[v][u] == Seat::Occupied {
-                    count += 1;
+    for dx in -1..2 {
+        for dy in -1..2 {
+            if dx != 0 || dy != 0 {
+                let mut x = x0 as isize;
+                let mut y = y0 as isize;
+                loop {
+                    x += dx;
+                    y += dy;
+                    if x < 0 || x >= limits.w as isize || y < 0 || y >= limits.h as isize {
+                        break;
+                    }
+                    match seats[y as usize][x as usize] {
+                        Seat::Occupied => {
+                            count += 1;
+                            break;
+                        },
+                        Seat::Empty => break,
+                        Seat::Floor => if limits.part1 {break},
+                    }
                 }
             }
         }
@@ -70,6 +81,7 @@ fn _dump(seats: &SeatArray) {
 }
 
 fn step(state: &mut SeatArray, prev: &SeatArray, limits: &Limits) {
+    let crowded = if limits.part1 {4} else {5};
     for y in 0..limits.h {
         for x in 0..limits.w {
             let near = count_near(prev, limits, x, y);
@@ -79,8 +91,7 @@ fn step(state: &mut SeatArray, prev: &SeatArray, limits: &Limits) {
                     if near == 0 {Seat::Occupied} else {Seat::Empty}
                 },
                 Seat::Occupied => {
-                    //println!("{} {} {}", x, y, near);
-                    if near < 4 {Seat::Occupied} else {Seat::Empty}
+                    if near < crowded {Seat::Occupied} else {Seat::Empty}
                 },
             };
         }
@@ -88,11 +99,11 @@ fn step(state: &mut SeatArray, prev: &SeatArray, limits: &Limits) {
 }
 
 // where F: Fn(&Boat, usize, usize) -> u32,
-fn run(v: &SeatArray) -> usize
+fn run(v: &SeatArray, part1: bool) -> usize
 {
     let tmp0 = RefCell::new(v.clone());
     let tmp1 = RefCell::new(v.clone());
-    let limits = &Limits{w: v[0].len(), h: v.len()};
+    let limits = &Limits{w: v[0].len(), h: v.len(), part1: part1};
 
     loop {
         {
@@ -111,17 +122,15 @@ fn run(v: &SeatArray) -> usize
     }
 }
 
-fn part1(v: &Vec<Vec<Seat>>) -> usize {
-    run(v)
-}
-
 fn test() {
     let v = parse("test");
-    assert_eq!(part1(&v), 37);
+    assert_eq!(run(&v, true), 37);
+    assert_eq!(run(&v, false), 26);
 }
 
 fn main() {
     test();
     let v = parse("input");
-    println!("{}", part1(&v));
+    println!("{}", run(&v, true));
+    println!("{}", run(&v, false));
 }
