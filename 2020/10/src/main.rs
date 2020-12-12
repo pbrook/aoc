@@ -7,45 +7,30 @@ fn parse(filename: &str) -> Vec<u32> {
     return lines.map(|v| v.unwrap().parse().unwrap()).collect()
 }
 
-fn count_ways(n: u32) -> u64 {
-    // There's probably a formula for this
-    // Or we could calculate it by brute force
-    // But we can get away with working out the values we need by hand
-    match n {
-        0 => 1, // 0 (3)
-        1 => 1, // 0 1 (4)
-        2 => 2, // 0 1 2 (5), 0 2 (5)
-        3 => 4, // 0 1 2 3 (6), 0 1 3 (6), 0 2 3 (6), 0 3 (6)
-        4 => 7, // 0 1 2 3 4 (7), 0 1 2 4 (7), 0 1 3 4 (7), 0 2 3 4 (7)
-                // 0 1 4 (7), 0 3 4 (7), 0 2 4 (7)
-        _ => panic!("chain too long"),
-    }
-}
-
 fn solve(input: &Vec<u32>) -> (u32, u64) {
+    const MAX_DELTA: usize = 3;
     let mut prev = 0;
-    let mut n1 = 0;
-    let mut n3 = 0;
-    let mut chain = 0;
-    let mut p2 = 1;
+    let mut count = [0; MAX_DELTA];
+    let mut ways = [0u64; MAX_DELTA];
+
+    ways[0] = 1;
 
     for &j in input {
-        match j - prev {
-            1 => chain += 1,
-            3 => {
-                n1 += chain;
-                n3 += 1;
-                p2 *= count_ways(chain);
-                chain = 0;
-            },
-            _ => panic!("bad delta"),
-        }
+        let delta = (j - prev) as usize;
         prev = j;
+
+        count[delta - 1] += 1;
+
+        ways.rotate_right(delta);
+        for n in 1..delta {
+            ways[n] = 0;
+        }
+        let new_ways = ways.iter().sum();
+        //println!("{} {} {:?} {}", j, delta, ways, new_ways);
+        ways[0] = new_ways;
+
     }
-    n3 += 1;
-    n1 += chain;
-    p2 *= count_ways(chain);
-    return (n1 * n3, p2);
+    return (count[0] * (count[2] + 1), ways[0]);
 }
 
 fn test() {
