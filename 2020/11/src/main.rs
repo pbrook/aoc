@@ -40,13 +40,7 @@ fn parse(filename: &str) -> SeatArray {
     return lines.map(|v| parse_line(v.unwrap())).collect();
 }
 
-struct Limits {
-    w: usize,
-    h: usize,
-    part1: bool,
-}
-
-fn count_near(seats: &SeatArray, limits: &Limits, x0: usize, y0: usize) -> u32 {
+fn count_near(seats: &SeatArray, part1: bool, x0: usize, y0: usize) -> u32 {
     let mut count = 0;
     for dx in -1..2 {
         for dy in -1..2 {
@@ -56,16 +50,13 @@ fn count_near(seats: &SeatArray, limits: &Limits, x0: usize, y0: usize) -> u32 {
                 loop {
                     x += dx;
                     y += dy;
-                    if x < 0 || x >= limits.w as isize || y < 0 || y >= limits.h as isize {
-                        break;
-                    }
-                    match seats[y as usize][x as usize] {
-                        Seat::Occupied => {
+                    match seats.get(y as usize).and_then(|row| row.get(x as usize)) {
+                        Some(Seat::Occupied) => {
                             count += 1;
                             break;
                         },
-                        Seat::Empty => break,
-                        Seat::Floor => if limits.part1 {break},
+                        Some(Seat::Empty) | None => break,
+                        Some(Seat::Floor) => if part1 {break},
                     }
                 }
             }
@@ -80,22 +71,26 @@ fn _dump(seats: &SeatArray) {
     }
 }
 
-fn step(state: &mut SeatArray, prev: &SeatArray, limits: &Limits) {
-    let crowded = if limits.part1 {4} else {5};
-    for y in 0..limits.h {
-        for x in 0..limits.w {
-            let near = count_near(prev, limits, x, y);
+fn step(state: &mut SeatArray, prev: &SeatArray, part1: bool) -> bool {
+    let crowded = if part1 {4} else {5};
+    let mut changed = false;
+    let w = state[0].len();
+    let h = state.len();
+    for y in 0..h {
+        for x in 0..w {
+            let near = count_near(prev, part1, x, y);
             state[y][x] = match prev[y][x] {
                 Seat::Floor => Seat::Floor,
                 Seat::Empty => {
-                    if near == 0 {Seat::Occupied} else {Seat::Empty}
+                    if near == 0 {changed = true; Seat::Occupied} else {Seat::Empty}
                 },
                 Seat::Occupied => {
-                    if near < crowded {Seat::Occupied} else {Seat::Empty}
+                    if near < crowded {Seat::Occupied} else {changed = true; Seat::Empty}
                 },
             };
         }
     }
+    return changed;
 }
 
 // where F: Fn(&Boat, usize, usize) -> u32,
@@ -103,18 +98,17 @@ fn run(v: &SeatArray, part1: bool) -> usize
 {
     let tmp0 = RefCell::new(v.clone());
     let tmp1 = RefCell::new(v.clone());
-    let limits = &Limits{w: v[0].len(), h: v.len(), part1: part1};
 
     loop {
         {
             let prev = &*tmp0.borrow();
             let state = &mut *tmp1.borrow_mut();
-            step(state, prev, limits);
+            let changed = step(state, prev, part1);
             /*
             _dump(state);
             println!("");
             */
-            if prev == state {
+            if ! changed {
                 return state.iter().map(|row| row.iter().filter(|&&c| c == Seat::Occupied).count()).sum();
             }
         }
