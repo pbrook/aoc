@@ -39,7 +39,7 @@ struct Point {
     offset: u64,
 }
 
-// This works is a.period is "small", a.period and b.period are coprime
+// This works if a.period is "small", a.period and b.period are coprime
 // If they are not coprime then the result.period should be GCD(a, b)
 fn find_offset(a: Point, b: Point) -> Point {
     // Iterate B until A is in the right place
