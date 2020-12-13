@@ -20,7 +20,6 @@ fn parse(filename: &str) -> Timetable {
     return Timetable{time: time, ids: parse_line(next_line())};
 }
 
-// Assume ap is "small"
 fn part1(t: &Timetable) -> u64 {
     let mut best = u64::MAX;
     let mut best_id = 0;
