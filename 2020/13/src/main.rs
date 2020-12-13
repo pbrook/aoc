@@ -41,6 +41,7 @@ struct Point {
 }
 
 // This works is a.period is "small", a.period and b.period are coprime
+// If they are not coprime then the result.period should be GCD(a, b)
 fn find_offset(a: Point, b: Point) -> Point {
     // Iterate B until A is in the right place
     let mut a_start = 0;
