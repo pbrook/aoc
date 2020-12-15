@@ -3,17 +3,22 @@ fn parse(s: &str) -> Vec<usize> {
     return s.split(',').map(|v| v.parse().unwrap()).collect();
 }
 
-fn part1(s: &str) -> usize {
-    let mut start = parse(s);
+fn play(s: &str) -> (usize, usize) {
+    let start = parse(s);
     let mut seen = Vec::new();
     let mut turn = 1;
     let mut val = 0;
-    start.reverse();
-    while turn != 2020 {
-        //println!("{} {}", turn, val);
-        match start.pop() {
-            Some(n) => val = n,
-            None => (),
+    let mut p1 = 0;
+    let start_max = start.iter().max().unwrap();
+    seen.resize(start_max + 1, 0);
+    // assume there are no duplicates in the starting sequence
+    for n in start {
+        seen[n] = turn;
+        turn += 1;
+    }
+    while turn != 30000000 {
+        if turn == 2020 {
+            p1 = val;
         }
         let mut next = 0;
         if val >= seen.len() {
@@ -28,20 +33,22 @@ fn part1(s: &str) -> usize {
         turn += 1;
         val = next;
     }
-    return val;
+    return (p1, val);
 }
 
 fn test() {
-    assert_eq!(part1("0,3,6"), 436);
-    assert_eq!(part1("1,3,2"), 1);
-    assert_eq!(part1("2,1,3"), 10);
-    assert_eq!(part1("1,2,3"), 27);
-    assert_eq!(part1("2,3,1"), 78);
-    assert_eq!(part1("3,2,1"), 438);
-    assert_eq!(part1("3,1,2"), 1836);
+    assert_eq!(play("0,3,6"), (436, 175594));
+    assert_eq!(play("1,3,2"), (1, 2578));
+    assert_eq!(play("2,1,3"), (10, 3544142));
+    assert_eq!(play("1,2,3"), (27, 261214));
+    assert_eq!(play("2,3,1"), (78, 6895259));
+    assert_eq!(play("3,2,1"), (438, 18));
+    assert_eq!(play("3,1,2"), (1836, 362));
 }
 
 fn main() {
     test();
-    println!("{}", part1("2,0,1,7,4,14,18"));
+    let (p1, p2) = play("2,0,1,7,4,14,18");
+    println!("{}", p1);
+    println!("{}", p2);
 }
