@@ -115,6 +115,7 @@ fn part2(prog: &Vec<Insn>) -> u64 {
 fn test() {
     let v = parse("test");
     assert_eq!(part1(&v), 165);
+    //assert_eq!(part2(&v), 1735166787584);
     let v = parse("test2");
     assert_eq!(part2(&v), 208);
 }
