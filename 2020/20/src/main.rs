@@ -129,24 +129,27 @@ impl TileWalker {
     fn get_bits(&self) -> [u8; 8] {
         let t = self.tile.borrow();
         assert!(TILE_SIZE == 10);
-        let mut val = [0; 8];
-        for (count, &bits) in t.data[1..=8].iter().enumerate() {
-            if (self.rot & 1) == 1 {
-                for bnum in 0..8 {
-                    val[bnum] |= (((bits >> (8-bnum)) & 1) << count) as u8;
-                }
-            } else {
-                val[count] = ((bits >> 1) & 0xff) as u8;
-            }
-        }
         let mut flip_h = false;
         let mut flip_v = false;
-        if (self.rot & 4) != 0 {
-            if (self.rot & 1) == 0 {
-                flip_h = true;
-            } else {
-                flip_v = true;
+        let mut val = [0; TILE_SIZE - 2];
+        if (self.rot & 1) != 0 {
+            let mut wmask = 1;
+            for &bits in &t.data[1..=8] {
+                let mut rmask = 2;
+                for bnum in 0..8 {
+                    if (bits & rmask) != 0 {
+                        val[bnum] |= wmask;
+                    }
+                    rmask <<= 1;
+                }
+                wmask <<= 1;
             }
+            flip_v = (self.rot & 4) == 0;
+        } else {
+            for n in 0..8 {
+                val[n] = ((t.data[n + 1] >> 1) & 0xff) as u8;
+            }
+            flip_h = (self.rot & 4) != 0;
         }
         if (self.rot & 2) != 0 {
             flip_h = !flip_h;
@@ -165,35 +168,20 @@ impl TileWalker {
     }
 }
 
-fn rot_corner(corner: &TileRef, flip: bool) -> u8 {
+fn rot_topleft(corner: &TileRef) -> u8 {
     let t = corner.borrow();
-    if flip {
-        if t.link[0].is_none() {
-            if t.link[1].is_none() {
-                return 4;
-            } else {
-                return 7;
-            }
+
+    if t.link[0].is_none() {
+        if t.link[3].is_none() {
+            return 0;
         } else {
-            if t.link[1].is_none() {
-                return 5;
-            } else {
-                return 6;
-            }
+            return 3;
         }
     } else {
-        if t.link[0].is_none() {
-            if t.link[3].is_none() {
-                return 0;
-            } else {
-                return 3;
-            }
+        if t.link[3].is_none() {
+            return 1;
         } else {
-            if t.link[3].is_none() {
-                return 1;
-            } else {
-                return 2;
-            }
+            return 2;
         }
     }
 }
@@ -233,9 +221,12 @@ fn _dump_pic(pic: &Vec<u128>) {
 }
 
 fn count_monsters(pic: &Vec<u128>, nessie: &Vec<u128>) -> u32 {
+    let picmask = pic.iter().fold(0, |acc, &v| acc | v);
+    let nmask = nessie.iter().fold(0, |acc, &v| acc | v);
+    let search_bits = nmask.leading_zeros() - picmask.leading_zeros();
     let mut count = 0;
     for start in 0..pic.len() - 3 {
-        for n in 0..128 {
+        for n in 0..=search_bits {
             if nessie.iter().zip(&pic[start..]).all(|(&m, &p)| m & (p >> n) == m) {
                 //println!("M {} {}", start, n);
                 count += 1;
@@ -245,8 +236,8 @@ fn count_monsters(pic: &Vec<u128>, nessie: &Vec<u128>) -> u32 {
     return count;
 }
 
-fn render(corner: &TileRef, flip: bool) -> Vec<u128> {
-    let mut w = TileWalker::new(corner, rot_corner(corner, flip));
+fn render(corner: &TileRef) -> Vec<u128> {
+    let mut w = TileWalker::new(corner, rot_topleft(corner));
     const TILE_BITS: usize = 8;
     assert!(TILE_BITS == 8);
     let mut pic = Vec::new();
@@ -323,25 +314,53 @@ fn find_corners(tiles: &Vec<TileRef>) -> Vec<&TileRef> {
     return corners;
 }
 
-fn search(corner: &TileRef, flip: bool) -> u32 {
-    let pic = &render(corner, flip);
-    let mut nessie = monster(false);
+fn transpose_pic(pic: &Vec<u128>) -> Vec<u128> {
+    // Assumes the image is square
+    let pic_size = pic.len();
+    let mut result = vec![0; pic_size];
+    let mut wmask = 1;
+    for &val in pic {
+        let mut rmask = 1;
+        for bit in 0..pic_size {
+            if (val & rmask) != 0 {
+                result[bit] |= wmask;
+            }
+            rmask <<= 1;
+        }
+        wmask <<= 1;
+    }
+    return result;
+}
+
+fn search(corner: &TileRef) -> u32 {
+    let pic1 = render(corner);
+    let pic2 = transpose_pic(&pic1);
+    let mut monsters = Vec::new();
     let mut count = Vec::new();
-    count.push(count_monsters(pic, &nessie));
+
+    let mut nessie = monster(false);
+    monsters.push(nessie.clone());
     nessie.reverse();
-    count.push(count_monsters(pic, &nessie));
-    nessie = monster(true);
-    count.push(count_monsters(pic, &nessie));
-    nessie.reverse();
-    count.push(count_monsters(pic, &nessie));
-    assert!(count.iter().filter(|&&n| n != 0).count() <= 1);
+    monsters.push(nessie.clone());
+    let mut eissen = monster(true);
+    monsters.push(eissen.clone());
+    eissen.reverse();
+    monsters.push(eissen);
+
+    for m in monsters {
+        count.push(count_monsters(&pic1, &m));
+        count.push(count_monsters(&pic2, &m));
+    }
+
+    assert_eq!(count.iter().filter(|&&n| n != 0).count(), 1);
 
     let ncount: u32 = count.iter().sum();
     if ncount == 0 {
         return 0;
     }
     let nsize: u32 = nessie.iter().map(|&v| v.count_ones()).sum();
-    let picsize: u32 = pic.iter().map(|&v| v.count_ones()).sum();
+    let picsize: u32 = pic1.iter().map(|&v| v.count_ones()).sum();
+    // assume sea monsters don't overlap
     return picsize - nsize * ncount;
 }
 
@@ -350,12 +369,9 @@ fn solve(tiles: &Vec<TileRef>) -> (u64, u32) {
 
     let part1 = corners.iter().map(|t| t.borrow().id).product();
 
-    let n1 = search(&corners[0], true);
-    let n2 = search(&corners[0], false);
+    let part2 = search(&corners[0]);
 
-    assert!(n1 == 0 || n2 == 0);
-    
-    return (part1, n1 + n2);
+    return (part1, part2);
 }
 
 fn test() {
