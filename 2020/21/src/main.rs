@@ -33,7 +33,7 @@ fn parse(filename: &str) -> Vec<Food> {
 type Ingredient<'a> = &'a String;
 type Allergen<'a> = &'a String;
 
-fn part1(input: &Vec<Food>) -> usize {
+fn solve(input: &Vec<Food>) -> (usize, String) {
     let mut map: HashMap<Allergen, HashSet<Ingredient>> = HashMap::new();
     let mut safe: HashSet<Ingredient> = HashSet::new();
 
@@ -46,12 +46,15 @@ fn part1(input: &Vec<Food>) -> usize {
         }
         safe = &safe | &ing;
     }
+    let mut dangerous:Vec<(Allergen, &str)> = Vec::new();
     while !map.is_empty() {
         let mut known: Vec<Allergen> = Vec::new();
         for (&a, ings) in map.iter() {
             if ings.len() == 1 {
-                safe.remove(ings.iter().next().unwrap());
+                let ing = ings.iter().next().unwrap();
+                safe.remove(ing);
                 known.push(a);
+                dangerous.push((a, ing.as_str()));
             }
         }
         assert!(known.len() > 0);
@@ -62,24 +65,30 @@ fn part1(input: &Vec<Food>) -> usize {
             *ings = &*ings & &safe;
         }
     }
-    let mut count = 0;
+    let mut part1 = 0;
     for food in input {
         for ing in &food.ingredients {
             if safe.contains(ing) {
-                count += 1;
+                part1 += 1;
             }
         }
     }
-    return count;
+
+    dangerous.sort_unstable();
+    let names: Vec<&str> = dangerous.into_iter().map(|(_, ing)| ing).collect();
+    let part2 = names.join(",");
+    return (part1, part2);
 }
 
 fn test() {
     let v = parse("test");
-    assert_eq!(part1(&v), 5);
+    assert_eq!(solve(&v), (5,"mxmxvkd,sqjhc,fvjkl".to_string()));
 }
 
 fn main() {
     test();
     let v = parse("input");
-    println!("{}", part1(&v));
+    let (p1, p2) = solve(&v);
+    println!("{}", p1);
+    println!("{}", p2);
 }
