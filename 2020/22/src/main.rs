@@ -83,6 +83,7 @@ fn play(p1: &mut Deck, p2: &mut Deck) -> bool {
             p2.push_back(c1);
         }
         if p1 == &loop1 && p2 == &loop2 {
+            p1.clear();
             return true;
         }
     }
@@ -93,6 +94,7 @@ fn part2(input: &Vec<Deck>) -> usize {
     let p1 = &mut input[0].clone();
     let p2 = &mut input[1].clone();
     let winner = if play(p1, p2) {p1} else {p2};
+    assert!(winner.len() > 0);
     return deck_score(winner);
 }
 
