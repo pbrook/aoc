@@ -3,33 +3,30 @@ fn parse(s: &str) -> Vec<usize> {
     return s.split(',').map(|v| v.parse().unwrap()).collect();
 }
 
-fn play(s: &str) -> (usize, usize) {
+const P1_ROUNDS: u32 = 2020;
+const P2_ROUNDS: u32 = 30000000;
+
+fn play(s: &str) -> (u32, u32) {
     let start = parse(s);
-    let mut seen = Vec::new();
+    let mut seen = vec![0; P2_ROUNDS as usize];
     let mut turn = 1;
     let mut val = 0;
     let mut p1 = 0;
-    let start_max = start.iter().max().unwrap();
-    seen.resize(start_max + 1, 0);
     // assume there are no duplicates in the starting sequence
     for n in start {
         seen[n] = turn;
         turn += 1;
     }
-    while turn != 30000000 {
-        if turn == 2020 {
+    while turn != P2_ROUNDS {
+        if turn == P1_ROUNDS {
             p1 = val;
         }
         let mut next = 0;
-        if val >= seen.len() {
-            seen.resize(val + 1, 0);
-        } else {
-            let last = seen[val];
-            if last != 0 {
-                next = turn - last;
-            }
+        let last = seen[val as usize];
+        if last != 0 {
+            next = turn - last;
         }
-        seen[val] = turn;
+        seen[val as usize] = turn;
         turn += 1;
         val = next;
     }
@@ -37,6 +34,9 @@ fn play(s: &str) -> (usize, usize) {
 }
 
 fn test() {
+    if cfg!(benchmark) {
+        return;
+    }
     assert_eq!(play("0,3,6"), (436, 175594));
     assert_eq!(play("1,3,2"), (1, 2578));
     assert_eq!(play("2,1,3"), (10, 3544142));
