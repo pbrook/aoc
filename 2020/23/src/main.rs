@@ -63,8 +63,9 @@ fn dec_p2(n: usize) -> usize {
 fn part2(input: &str) -> u64 {
     let mut shells = Vec::with_capacity(NUM_SHELLS);
     let input_len = input.len();
-    for _ in 0..input_len {
-        shells.push(Shell{next: 0, prev: 0});
+    shells.push(Shell{next: 1, prev: NUM_SHELLS - 1});
+    for n in 1..NUM_SHELLS {
+        shells.push(Shell{next: n + 1, prev: n - 1});
     }
     let mut init = input.chars().map(|c| c.to_digit(10).unwrap() as usize - 1);
     let mut cur = init.next().unwrap();
@@ -75,9 +76,6 @@ fn part2(input: &str) -> u64 {
         prev = n;
     }
     shells[prev].next = input_len;
-    for n in input_len..NUM_SHELLS {
-        shells.push(Shell{next: n + 1, prev: n - 1});
-    }
     shells[input_len].prev = prev;
     shells[cur].prev = NUM_SHELLS - 1;
     shells[NUM_SHELLS - 1].next = cur;
