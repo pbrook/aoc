@@ -47,13 +47,13 @@ fn part1(input: &str) -> String {
 }
 
 struct Shell {
-    next: usize,
-    prev: usize,
+    next: u32,
+    prev: u32,
 }
 
-const NUM_SHELLS: usize = 1000000;
+const NUM_SHELLS: u32 = 1000000;
 
-fn dec_p2(n: usize) -> usize {
+fn dec_p2(n: u32) -> u32 {
     if n == 0 {
         return NUM_SHELLS - 1;
     }
@@ -61,52 +61,58 @@ fn dec_p2(n: usize) -> usize {
 }
 
 fn part2(input: &str) -> u64 {
-    let mut shells = Vec::with_capacity(NUM_SHELLS);
-    let input_len = input.len();
+    let mut shells = Vec::with_capacity(NUM_SHELLS as usize);
+    macro_rules! shell {
+        ($n:expr) => {shells[($n) as usize]};
+    }
+    let input_len = input.len() as u32;
     shells.push(Shell{next: 1, prev: NUM_SHELLS - 1});
     for n in 1..NUM_SHELLS {
         shells.push(Shell{next: n + 1, prev: n - 1});
     }
-    let mut init = input.chars().map(|c| c.to_digit(10).unwrap() as usize - 1);
+    let mut init = input.chars().map(|c| c.to_digit(10).unwrap() as u32 - 1);
     let mut cur = init.next().unwrap();
     let mut prev = cur;
     for n in init {
-        shells[prev].next = n;
-        shells[n].prev = prev;
+        shell!(prev).next = n;
+        shell!(n).prev = prev;
         prev = n;
     }
-    shells[prev].next = input_len;
-    shells[input_len].prev = prev;
-    shells[cur].prev = NUM_SHELLS - 1;
-    shells[NUM_SHELLS - 1].next = cur;
+    shell!(prev).next = input_len;
+    shell!(input_len).prev = prev;
+    shell!(cur).prev = NUM_SHELLS - 1;
+    shell!(NUM_SHELLS - 1).next = cur;
 
     for _ in 0..10000000 {
-        let n1 = shells[cur].next;
-        let n2 = shells[n1].next;
-        let n3 = shells[n2].next;
-        let n4 = shells[n3].next;
-        shells[n4].prev = cur;
-        shells[cur].next = n4;
+        let n1 = shell!(cur).next;
+        let n2 = shell!(n1).next;
+        let n3 = shell!(n2).next;
+        let n4 = shell!(n3).next;
+        shell!(n4).prev = cur;
+        shell!(cur).next = n4;
 
         let mut ins = dec_p2(cur);
         while n1 == ins || n2 == ins || n3 == ins {
             ins = dec_p2(ins);
         }
 
-        let next = shells[ins].next;
-        shells[n3].next = next;
-        shells[next].prev = n3;
-        shells[ins].next = n1;
-        shells[n1].prev = ins;
+        let next = shell!(ins).next;
+        shell!(n3).next = next;
+        shell!(next).prev = n3;
+        shell!(ins).next = n1;
+        shell!(n1).prev = ins;
 
         cur = n4;
     }
-    let s1 = shells[0].next;
-    let s2 = shells[s1].next;
+    let s1 = shell!(0).next;
+    let s2 = shell!(s1).next;
     return (s1 + 1) as u64 * (s2 + 1) as u64;
 }
 
 fn test() {
+    if cfg!(benchmark) {
+        return;
+    }
     let v = "389125467";
     assert_eq!(part1(v), "67384529");
     assert_eq!(part2(v), 149245887792);
