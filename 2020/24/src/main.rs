@@ -2,11 +2,15 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::collections::HashSet;
 
-#[derive(Debug,PartialEq,Eq,Hash)]
-struct Point {
-    a: i32,
-    b: i32,
+#[derive(Debug,Copy,Clone,PartialEq,Eq,Hash)]
+struct Point_<T> {
+    a: T,
+    b: T,
 }
+
+// This can be any integer type.
+// i8 is substantially faster than i32, and sufficient for my input!
+type Point = Point_<i8>;
 
 type Chain = Vec<Dir>;
 #[derive(Debug)]
@@ -69,7 +73,26 @@ fn follow(c: &Chain) -> Point {
     return Point{a, b};
 }
 
-fn part1(input: &Vec<Chain>) -> usize {
+fn points_near(p: &Point) -> Vec<Point> {
+    let a = p.a;
+    let b = p.b;
+
+    return vec![
+        Point{a: a + 1, b: b},
+        Point{a: a - 1, b: b},
+        Point{a: a, b: b + 1},
+        Point{a: a, b: b - 1},
+        Point{a: a + 1, b: b - 1},
+        Point{a: a - 1, b: b + 1},
+    ]
+}
+
+fn count_near(points: &HashSet<Point>, cur: &Point) -> usize {
+    let near = points_near(cur);
+    return near.iter().filter(|p| points.contains(p)).count();
+}
+
+fn solve(input: &Vec<Chain>) -> (usize, usize) {
     let mut points = HashSet::new();
     for c in input {
         let p = follow(c);
@@ -79,17 +102,43 @@ fn part1(input: &Vec<Chain>) -> usize {
             points.insert(p);
         }
     }
-    return points.len();
+    let part1 = points.len();
+
+    for _day in 0..100 {
+        let mut np: HashSet<Point> = HashSet::with_capacity(points.len() * 2);
+        for cur in points.iter() {
+            {
+                let n = count_near(&points, &cur);
+                if n == 1 || n == 2 {
+                    np.insert(*cur);
+                }
+            }
+            let near = points_near(&cur);
+            for p in near.iter() {
+                if points.contains(p) {
+                    continue;
+                }
+                let n = count_near(&points, p);
+                if n == 2 {
+                    np.insert(*p);
+                }
+            }
+        }
+        points = np;
+    }
+    return (part1, points.len());
 }
 
 fn test() {
     let v = parse("test");
     assert_eq!(follow(&parse_line("nwwswee".to_string())), Point{a: 0, b: 0});
-    assert_eq!(part1(&v), 10);
+    assert_eq!(solve(&v), (10, 2208));
 }
 
 fn main() {
     test();
     let v = parse("input");
-    println!("{}", part1(&v));
+    let (p1, p2) = solve(&v);
+    println!("{}", p1);
+    println!("{}", p2);
 }
