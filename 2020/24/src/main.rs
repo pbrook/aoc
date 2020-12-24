@@ -130,6 +130,9 @@ fn solve(input: &Vec<Chain>) -> (usize, usize) {
 }
 
 fn test() {
+    if cfg!(benchmark) {
+        return;
+    }
     let v = parse("test");
     assert_eq!(follow(&parse_line("nwwswee".to_string())), Point{a: 0, b: 0});
     assert_eq!(solve(&v), (10, 2208));
