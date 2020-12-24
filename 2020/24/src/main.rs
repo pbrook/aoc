@@ -71,18 +71,15 @@ fn follow(c: &Chain) -> Point {
 
 fn part1(input: &Vec<Chain>) -> usize {
     let mut points = HashSet::new();
-    let mut count = 0;
     for c in input {
         let p = follow(c);
         if points.contains(&p) {
             points.remove(&p);
-            count -= 1;
         } else {
             points.insert(p);
-            count += 1;
         }
     }
-    return count;
+    return points.len();
 }
 
 fn test() {
