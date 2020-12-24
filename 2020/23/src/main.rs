@@ -48,7 +48,6 @@ fn part1(input: &str) -> String {
 
 struct Shell {
     next: u32,
-    prev: u32,
 }
 
 const NUM_SHELLS: u32 = 1000000;
@@ -66,21 +65,17 @@ fn part2(input: &str) -> u64 {
         ($n:expr) => {shells[($n) as usize]};
     }
     let input_len = input.len() as u32;
-    shells.push(Shell{next: 1, prev: NUM_SHELLS - 1});
-    for n in 1..NUM_SHELLS {
-        shells.push(Shell{next: n + 1, prev: n - 1});
+    for n in 0..NUM_SHELLS {
+        shells.push(Shell{next: n + 1});
     }
     let mut init = input.chars().map(|c| c.to_digit(10).unwrap() as u32 - 1);
     let mut cur = init.next().unwrap();
     let mut prev = cur;
     for n in init {
         shell!(prev).next = n;
-        shell!(n).prev = prev;
         prev = n;
     }
     shell!(prev).next = input_len;
-    shell!(input_len).prev = prev;
-    shell!(cur).prev = NUM_SHELLS - 1;
     shell!(NUM_SHELLS - 1).next = cur;
 
     for _ in 0..10000000 {
@@ -88,7 +83,6 @@ fn part2(input: &str) -> u64 {
         let n2 = shell!(n1).next;
         let n3 = shell!(n2).next;
         let n4 = shell!(n3).next;
-        shell!(n4).prev = cur;
         shell!(cur).next = n4;
 
         let mut ins = dec_p2(cur);
@@ -98,9 +92,7 @@ fn part2(input: &str) -> u64 {
 
         let next = shell!(ins).next;
         shell!(n3).next = next;
-        shell!(next).prev = n3;
         shell!(ins).next = n1;
-        shell!(n1).prev = ins;
 
         cur = n4;
     }
