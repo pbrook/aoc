@@ -7,14 +7,15 @@ fn parse(filename: &str) -> Vec<i32> {
     return lines.map(|v| v.unwrap().parse().unwrap()).collect();
 }
 
-fn part1(v: &Vec<i32>) -> i32 {
-    let mut prev = v[0];
+// When comparing two adjacent sliding windows, we're actually comparing the
+// value "added" to the value "removed". Part 1 is the degenerate case
+// of a single element window
+fn count(v: &Vec<i32>, size: usize) -> i32 {
     let mut result = 0;
-    for &i in v {
-        if i > prev {
+    for i in size..v.len() {
+        if v[i - size] < v[i] {
             result += 1;
         }
-        prev = i
     }
     return result;
 }
@@ -23,11 +24,14 @@ fn test() {
     if cfg!(benchmark) {
         return;
     }
-    assert_eq!(part1(&parse("test")), 7)
+    let v = &parse("test");
+    assert_eq!(count(v, 1), 7);
+    assert_eq!(count(v, 3), 5);
 }
 
 fn main() {
     test();
-    let v = parse("input");
-    println!("{}", part1(&v));
+    let v = &parse("input");
+    println!("{}", count(v, 1));
+    println!("{}", count(v, 3));
 }
