@@ -1,24 +1,33 @@
-program one
+program two
     use aoc
 
     implicit none
 
-    print *, part1('test')
-    print *, part1('input')
+    integer :: a(2)
+
+    a = submarine('test')
+    call assert(a(1), 150)
+    call assert(a(2), 900)
+
+    a = submarine('input')
+    print *, "Part1:", a(1), "Part2:", a(2)
 contains
 
-function part1(filename)
+function submarine(filename)
     character(*) :: filename
-    integer :: part1
+    integer :: submarine(2)
     integer :: fd
     character(8) :: cmd
     integer :: dist
     integer :: stat
     integer :: x
     integer :: depth
+    integer :: aim
 
     x = 0
     depth = 0
+    ! aim is the same as depth for part1
+    aim = 0
     open(newunit=fd, action='read', file=filename, iostat=stat)
 
     do
@@ -29,17 +38,18 @@ function part1(filename)
         select case (cmd)
         case ('forward')
             x = x + dist
+            depth = depth + aim * dist
         case ('up')
-            depth = depth - dist
+            aim = aim - dist
         case ('down')
-            depth = depth + dist
+            aim = aim + dist
         case default
             error stop
         end select
     end do
     close(fd)
 
-    part1 = x * depth
+    submarine = (/x * aim, x * depth/)
 end function
 
 end program
