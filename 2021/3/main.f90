@@ -35,11 +35,11 @@ function process(filename) result(part)
     integer :: stat
     character(32) :: line
     character(:), allocatable :: bits(:)
-    integer :: i, j
+    integer :: i
     integer :: nbits
     integer :: nlines
-    integer :: g, e
-    integer :: top, bot
+    integer :: mid
+    integer :: bound
 
     open(newunit=fd, action='read', file=filename, iostat=stat)
     nlines = 0
@@ -59,22 +59,26 @@ function process(filename) result(part)
     end do
     close(fd)
 
-    g = 0
-    e = 0
-    do i=1,nbits
-        g = g * 2
-        e = e * 2
-        if (common_bit(bits, i) == '1') then
-            g = g + 1
-        else
-            e = e + 1
-        end if
+    do i = 1,nbits
+        line(i:i) = common_bit(bits, i)
+    end do
+    i = binstr(line)
+    part(1) = i * ieor(i, ishft(1, nbits) - 1)
+
+    mid = partition(bits, 1, nlines, 1)
+    bound = mid
+    i = 1
+    do while (bound > 2)
+        i = i + 1
+        bound = partition(bits, 1, bound - 1, i)
+    end do
+    bound = mid
+    i = 1
+    do while (bound < nlines)
+        i = i + 1
+        bound = partition(bits, bound, nlines, i)
     end do
 
-
-    part(1) = g * e
-
-    call partition(bits, 1, nlines, 1)
     part(2) = binstr(bits(1)) * binstr(bits(nlines))
 end function
 
@@ -85,11 +89,12 @@ function binstr(s) result (val)
     read (s, "(B32)") val
 end function
 
-recursive subroutine partition(bits, top, bot, pos)
+function partition(bits, top, bot, pos)
     character(:), allocatable :: bits(:)
     integer, intent(in) :: top
     integer, intent(in) :: bot
     integer, intent(in) :: pos
+    integer :: partition
     character :: com
     character(len(bits)) :: tmp
     integer :: a, b
@@ -98,27 +103,20 @@ recursive subroutine partition(bits, top, bot, pos)
     a = top
     b = bot
     do
-        do while (a < bot .and. bits(a)(pos:pos) == com)
+        do while (a <= bot .and. bits(a)(pos:pos) == com)
             a = a + 1
         end do
-        do while (b > top .and. bits(b)(pos:pos) /= com)
+        do while (b >= top .and. bits(b)(pos:pos) /= com)
             b = b - 1
         end do
-        if (a >= b) then
+        if (a > b) then
             exit
         end if
         tmp = bits(a)
         bits(a) = bits(b)
         bits(b) = tmp
     end do
-    a = a - 1
-    b = b + 1
-    if (top == 1 .and. a > 1) then
-        call partition(bits, top, a, pos + 1)
-    end if
-    if (bot == size(bits) .and. b < size(bits)) then
-        call partition(bits, b, bot, pos + 1)
-    end if
-end subroutine
+    partition = a
+end function
 
 end program
