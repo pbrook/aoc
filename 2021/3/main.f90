@@ -63,7 +63,7 @@ function process(filename) result(part)
         line(i:i) = common_bit(bits, i)
     end do
     i = binstr(line)
-    part(1) = i * ieor(i, ishft(1, nbits) - 1)
+    part(1) = i * ieor(i, maskr(nbits))
 
     mid = partition(bits, 1, nlines, 1)
     bound = mid
