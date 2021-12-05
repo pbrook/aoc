@@ -12,11 +12,11 @@ end type vent
 
     a = map_vents('test')
     call assert(a(1), 5)
-    !call assert(a(2), 1924)
+    call assert(a(2), 12)
 
     a = map_vents('input')
     print *, "Part1:", a(1)
-    !print *, "Part2:", a(2)
+    print *, "Part2:", a(2)
 contains
 
 function map_vents(filename) result(part)
@@ -31,7 +31,7 @@ function map_vents(filename) result(part)
     type(vent), pointer :: p
     character(2) dummy
     integer :: width, height
-    integer :: a, b
+    integer :: a, b, w, h
 
     open(newunit=fd, action='read', file=filename)
 
@@ -70,6 +70,20 @@ function map_vents(filename) result(part)
         p => p%next
     end do
     part(1) = count(grid > 1)
+    p => vents
+    do while (associated(p))
+        w = p%x2 - p%x1
+        h = p%y2 - p%y1
+        if (w /= 0 .and. h /= 0) then
+            do i = 0,abs(w)
+                a = p%x1 + sign(i, w)
+                b = p%y1 + sign(i, h)
+                grid(a, b) = grid(a, b) + 1
+            end do
+        end if
+        p => p%next
+    end do
+    part(2) = count(grid > 1)
 end function
 
 end program
