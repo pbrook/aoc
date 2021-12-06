@@ -3,24 +3,24 @@ program main
 
     implicit none
 
-    integer :: a(2)
+    integer(8) :: a(2)
 
     a = breed('test')
-    call assert(a(1), 5934)
-    !call assert(a(2), 12)
+    call assert8(a(1), 5934_8)
+    call assert8(a(2), 26984457539_8)
 
     a = breed('input')
     print *, "Part1:", a(1)
-    !print *, "Part2:", a(2)
+    print *, "Part2:", a(2)
 contains
 
 function breed(filename) result(part)
     character(*) :: filename
-    integer :: part(2)
+    integer(8) :: part(2)
     integer :: fd
     integer :: stat
-    integer :: fish(0:8)
-    integer :: val
+    integer(8) :: fish(0:8)
+    integer(8) :: val
     character dummy
     integer :: day
 
@@ -36,13 +36,24 @@ function breed(filename) result(part)
     end do
     close(fd)
     
-    do day=1,80
-       val = fish(0) 
-       fish(0:7) = fish(1:8)
-       fish(6) = fish(6) + val
-       fish(8) = val
-    end do
+    call age(fish, 80)
     part(1) = sum(fish)
+    call age(fish, 256 - 80)
+    part(2) = sum(fish)
 end function
+
+subroutine age(fish, days)
+    integer(8) :: fish(0:8)
+    integer, intent(in) :: days
+    integer(8) :: new
+    integer :: i
+
+    do i=1,days
+       new = fish(0)
+       fish(0:7) = fish(1:8)
+       fish(6) = fish(6) + new
+       fish(8) = new
+    end do
+end subroutine
 
 end program

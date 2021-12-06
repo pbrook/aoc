@@ -33,8 +33,17 @@ subroutine read_ints(a, filename)
 end subroutine
 
 subroutine assert(a, b)
-    integer :: a
-    integer :: b
+    integer, intent(in) :: a
+    integer, intent(in) :: b
+    if (a /= b) then
+        print *, 'Got:', a, 'Expected:', b
+        error stop 1
+    end if
+end subroutine
+
+subroutine assert8(a, b)
+    integer(8), intent(in) :: a
+    integer(8), intent(in) :: b
     if (a /= b) then
         print *, 'Got:', a, 'Expected:', b
         error stop 1
