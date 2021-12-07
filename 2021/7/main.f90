@@ -5,16 +5,16 @@ program main
 
     integer :: a(2)
 
-    a = breed('test')
+    a = move('test')
     call assert(a(1), 37)
-    !call assert8(a(2), 26984457539_8)
+    call assert(a(2), 168)
 
-    a = breed('input')
+    a = move('input')
     print *, "Part1:", a(1)
-    !print *, "Part2:", a(2)
+    print *, "Part2:", a(2)
 contains
 
-function breed(filename) result(part)
+function move(filename) result(part)
     character(*) :: filename
     integer :: part(2)
     integer :: fd
@@ -26,6 +26,7 @@ function breed(filename) result(part)
     integer, allocatable :: crabs(:)
     integer :: pos
     integer :: best, fuel
+    integer :: a, b
 
     ncrabs = 1
     open(newunit=fd, action='read', file=filename)
@@ -43,8 +44,8 @@ function breed(filename) result(part)
     read (fd, *) crabs
     close(fd)
     
-    best = huge(best)
     ! O(n^2). Don't care!
+    best = huge(best)
     do i=1,ncrabs
         pos = crabs(i)
         fuel = sum(abs(crabs - pos))
@@ -53,6 +54,25 @@ function breed(filename) result(part)
         end if
     end do
     part(1) = best
+
+    ! Still O(n^2). Still don't care!
+    best = huge(best)
+    a = minval(crabs)
+    b = maxval(crabs)
+    do pos=a,b
+        fuel = sum(part2(abs(crabs - pos)))
+        if (fuel < best) then
+            best = fuel
+        end if
+    end do
+    part(2) = best
+end function
+
+elemental function part2(dist)
+    integer, intent(in) :: dist
+    integer :: part2
+
+    part2 = dist * (dist + 1) / 2
 end function
 
 end program
