@@ -7,11 +7,11 @@ program main
 
     a = octop('test')
     call assert(a(1), 1656)
-    !call assert(a(2), )
+    call assert(a(2), 195)
 
     a = octop('input')
     print *, "Part1:", a(1)
-    !print *, "Part2:", a(2)
+    print *, "Part2:", a(2)
 contains
 
 
@@ -22,7 +22,7 @@ function octop(filename) result(part)
     integer :: stat
 
     integer :: grid(0:11,0:11)
-    integer :: i
+    integer :: i, n
 
     grid=0 
     open(newunit=fd, action='read', file=filename)
@@ -35,6 +35,14 @@ function octop(filename) result(part)
         part(1) = part(1) + step(grid)
         !print *, i
         !call dump(grid)
+    end do
+    do
+        n = step(grid)
+        if (n == 100) then
+            part(2) = i
+            exit
+        end if
+        i = i + 1
     end do
 end function
 
