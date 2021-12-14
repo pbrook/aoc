@@ -11,7 +11,7 @@ end type
 
     a = origami('test')
     call assert(a(1), 17)
-    !call assert(a(2), 36)
+    call assert(a(2), 16)
 
     a = origami('input')
     print *, "Part1:", a(1)
@@ -46,11 +46,18 @@ function origami(filename) result(part)
     end do
     read (fd, *)
 
-    read (fd, "(a20)", iostat=stat) line
-    call fold(p, trim(line))
+    read (fd, "(a20)") line
+    call fold(p, line)
+    part(1) = plot(p, .false.)
+    do
+        read (fd, "(a20)", iostat=stat) line
+        if (stat /= 0) then
+            exit
+        end if
+        call fold(p, line)
+    end do
+    part(2) = plot(p, .true.)
     close(fd)
-
-    part(1) = plot(p)
 end function
 
 subroutine fold(p, line)
@@ -77,8 +84,9 @@ subroutine fold(p, line)
     end if
 end subroutine
 
-function plot(p) result(n)
+function plot(p, display) result(n)
     type(point), allocatable, intent(in) :: p(:)
+    logical, intent(in) :: display
     integer :: n
     integer :: w, h
     integer :: i
@@ -96,9 +104,11 @@ function plot(p) result(n)
             n = n + 1
         end if
     end do
-    do i=0,size(grid)-1
-        !print *, grid(i)
-    end do
+    if (display) then
+        do i=0,size(grid)-1
+            print *, grid(i)
+        end do
+    end if
 end function
 
 end program
