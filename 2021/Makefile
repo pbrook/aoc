@@ -6,6 +6,6 @@ run: fortran.bin
 	./fortran.bin
 
 fortran.bin: main.f90 ../aoc.f90
-	gfortran -g $(FFLAGS) ../aoc.f90 main.f90 -o $@
+	gfortran -g -fdefault-integer-8 $(FFLAGS) ../aoc.f90 main.f90 -o $@
 
 .PHONY: run
