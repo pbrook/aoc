@@ -21,11 +21,11 @@ end type
 
     a = snailsum('test2')
     call assert(a(1), 4140)
-    !call assert(a(2), 112)
+    call assert(a(2), 3993)
 
     a = snailsum('input')
     print *, "Part1:", a(1)
-    !print *, "Part2:", a(2)
+    print *, "Part2:", a(2)
 contains
 
 subroutine test()
@@ -46,20 +46,43 @@ function snailsum(filename) result(part)
     integer :: fd
     integer :: stat
 
-    type(node), pointer :: val
-    type(node), pointer :: newval
-    character :: c
+    integer :: nval
+    type(node), allocatable :: val(:)
+    type(node) :: tmp
+    integer :: i, j
 
     open(newunit=fd, action='read', file=filename)
-    val => parse_node(fd)
+    nval = 0
     do
-       newval => parse_node(fd)
-       if (.not. associated(newval%next)) then
-           exit
-       end if
-       val => add_pair(val, newval)
+        read (fd, "()", iostat=stat)
+        if (stat /= 0) then
+            exit
+        end if
+        nval = nval + 1
     end do
-    part(1) = magnitude(val)
+    rewind(fd)
+
+    allocate(val(nval))
+
+    val(1) = parse_node(fd)
+    tmp = copy_node(val(1))
+    do i=2,nval
+       val(i) = parse_node(fd)
+       tmp = add_pair(tmp, copy_node(val(i)))
+    end do
+    close(fd)
+    part(1) = magnitude(tmp)
+
+    part(2) = 0
+    do i=1,nval
+        do j=1,nval
+            if (i == j) then
+                cycle
+            end if
+            tmp = add_pair(copy_node(val(i)), copy_node(val(j)))
+            part(2) = max(part(2), magnitude(tmp))
+        end do
+    end do
 end function
 
 subroutine dump(val)
@@ -99,20 +122,20 @@ function last(val) result(p)
 end function
 
 function add_pair(a, b) result(val)
-    type(node), pointer, intent(inout) :: a, b
-    type(node), pointer :: val
+    type(node), target, intent(in) :: a, b
+    type(node), target :: val
     type(node), pointer :: p
     logical :: again
 
-    p => last(a)
+    val = a
+    p => val
+    p => last(p)
     p%next => b%next
-    deallocate(b)
     p => last(p)
     p%depth = p%depth - 1
     p => a%next
     p%depth = p%depth + 1
 
-    val => a
     again = .true.
     do while (again)
         again = explode(val)
@@ -123,7 +146,7 @@ function add_pair(a, b) result(val)
 end function
 
 function split(val) result (again)
-    type(node), pointer, intent(inout) :: val
+    type(node), target, intent(inout) :: val
     logical :: again
     type(node), pointer :: p, r
 
@@ -173,17 +196,22 @@ end function
 
 
 function magnitude(val)
-    type(node), pointer, intent(in) :: val
+    type(node) :: val
     type(node), pointer :: p, r
     integer :: magnitude
 
     p => val%next
     r => p%next
     magnitude = mag1(p, r)
+    do while (associated(p))
+        r => p%next
+        deallocate(p)
+        p => r
+    end do
 end function
 
 function explode(val) result (again)
-    type(node), pointer, intent(inout) :: val
+    type(node), target, intent(inout) :: val
     logical :: again
     type(node), pointer :: prev, p, r
     integer :: depth
@@ -254,15 +282,14 @@ end subroutine
 
 function parse_str(s) result(head)
     character(*) :: s
-    type(node), pointer :: head
+    type(node), target :: head
     type(node), pointer :: p
     integer :: depth
     integer :: i
 
-    depth = 0
-    allocate(head)
     head%val = -1
     p => head
+    depth = 0
     do i=1,len(s)
         call build_node(p, depth, s(i:i))
     end do
@@ -270,22 +297,36 @@ end function
 
 function parse_node(fd) result(head)
     integer, intent(in) :: fd
-    type(node), pointer :: head
+    type(node), target :: head
     type(node), pointer :: p
     character :: c
     integer :: depth
     integer :: stat
 
-    depth = 0
-    allocate(head)
     head%val = -1
     p => head
+    depth = 0
     do
         read (fd, "(a1)", advance='no', iostat=stat) c
         if (stat /= 0) then
             exit
         end if
         call build_node(p, depth, c)
+    end do
+end function
+
+function copy_node(val) result(head)
+    type(node), target, intent(in) :: val
+    type(node), target :: head
+    type(node), pointer :: src, dest
+
+    src => val%next
+    dest => head
+    do while (associated(src))
+        allocate(dest%next)
+        dest => dest%next
+        dest = src
+        src => src%next
     end do
 end function
 
