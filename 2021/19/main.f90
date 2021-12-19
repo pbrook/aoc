@@ -22,11 +22,11 @@ end interface
 
     a = assemble('test')
     call assert(a(1), 79)
-    !call assert(a(2), 3993)
+    call assert(a(2), 3621)
 
     a = assemble('input')
     print *, "Part1:", a(1)
-    !print *, "Part2:", a(2)
+    print *, "Part2:", a(2)
 contains
 
 elemental function beacon_eq(a, b) result(r)
@@ -115,6 +115,26 @@ function assemble(filename) result(part)
         end do
     end do
     part(1) = count_beacons(s)
+
+    part(2) = furthest(s%offset)
+end function
+
+function furthest(b) result (far)
+    type(beacon), intent(in) :: b(:)
+    type(beacon) :: diff
+    integer :: far, n
+    integer :: i, j
+
+    far = 0
+    do i=1,size(b)
+        do j=i+1,size(b)
+            diff = b(i) - b(j)
+            n = abs(diff%x) + abs(diff%y) + abs(diff%z)
+            if (n > far) then
+                far = n
+            end if
+        end do
+    end do
 end function
 
 elemental function rotatez(b) result(r)
@@ -188,13 +208,13 @@ subroutine match(s, t)
                 if (n >= 12) then
                     t%matched = .true.
                     t%offset = offset
+                    t%b = t%b - offset
                     exit outer
                 end if
             end do
         end do
         call permute(t%b, p)
     end do outer
-    t%b = t%b - offset
 end subroutine
 
 function try_beacon(s, t, b) result (r)
