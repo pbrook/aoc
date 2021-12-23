@@ -4,35 +4,40 @@ program main
     implicit none
 
     integer, parameter :: hallpos(7) = [1, 2, 4, 6, 8, 10, 11]
-    integer, parameter :: homepos(8) = [3, 5, 7, 9, 3, 5, 7, 9]
-    integer, parameter :: move_cost(8) = [1, 10, 100, 1000, 1, 10, 100, 1000]
-    character(8), parameter :: pod_name = 'ABCDabcd'
+    integer, parameter :: homepos(16) = [3, 5, 7, 9, 3, 5, 7, 9, 3, 5, 7, 9, 3, 5, 7, 9]
+    integer, parameter :: move_cost(16) = [1, 10, 100, 1000, 1, 10, 100, 1000, 1, 10, 100, 1000, 1, 10, 100, 1000]
+    character(32), parameter :: pod_name = 'ABCDabcdEFGHefgh'
     type pod
         integer :: pos
-        logical :: bot
+        integer :: stack
         logical :: home
         logical :: moved
     end type
     type cave
-        type(pod) :: p(8)
+        type(pod) :: p(16)
         integer :: blocked(11)
     end type
 
+    integer :: nlines
+    integer :: npods
     integer :: energy
     integer :: best
-    integer :: steps(16)
-    type(cave) :: winner(16)
+    integer :: steps(32)
+    integer :: force(32)
+    integer :: forcepos(32)
+    type(cave) :: winner(32)
+    logical :: won(32) = .false.
 
     integer :: a(2)
 
     a = organize('test')
     call assert(a(1), 12521)
-    !call assert(a(2), 39)
+    call assert(a(2), 44169)
 
 
     a = organize('input')
     print *, "Part1:", a(1)
-    !print *, "Part2:", a(2)
+    print *, "Part2:", a(2)
 contains
 
 function organize(filename) result(part)
@@ -41,40 +46,82 @@ function organize(filename) result(part)
     integer :: fd
     integer :: stat
 
-    character(15) :: line
+    character(15) :: line(4)
     integer :: i, n
 
-    type(cave) :: c
-
     open(newunit=fd, action='read', file=filename)
-
-    c%p = pod(0, .false., .false., .false.)
-    c%blocked = 0
-    do i=1,4
-        c%blocked(homepos(i)) = -2
-    end do
-
     call check_line(fd, '#############')
     call check_line(fd, '#...........#')
-    call parse_podline(c, fd, .false.)
-    call parse_podline(c, fd, .true.)
+    call read_line(fd, line(2))
+    call read_line(fd, line(1))
     call check_line(fd, '  #########')
+    close(fd)
 
-    !call dump(c)
+    force = 0
+    forcepos = 0
+    part(1) = solve_cave(line(:2))
+
+    !call forcelist(force, 'hefbEggGGBDBbfccaDFFHHdEed')
+    !forcepos(:5) = [11,1,10,8,2]
+    line(4) = line(2)
+    line(3) = '  #D#C#B#A#'
+    line(2) = '  #D#B#A#C#'
+    part(2) = solve_cave(line)
+end function
+
+function csub(a, b)
+    character, intent(in) :: a, b
+    integer :: csub
+    csub = iachar(b) + 1 - iachar(a)
+end function
+
+subroutine forcelist(a, s)
+    character(*), intent(in) :: s
+    integer, intent(out) :: a(:)
+    integer :: i
+
+    a = 0
+    do i=1,len(s)
+        a(i) = scan(pod_name, s(i:i))
+    end do
+end subroutine
+
+function solve_cave(line)
+    character(15), intent(in) :: line(:)
+    integer :: solve_cave
+
+    type(cave) :: c
+    integer :: i, n
+
+    nlines = size(line)
+
+    npods = nlines * 4
+    c%p = pod(0, 0, .false., .false.)
+    c%blocked = 0
+    do i=1,4
+        c%blocked(homepos(i)) = nlines - 1
+    end do
+    do i=1,nlines
+        call parse_podline(c, line(i), i)
+    end do
 
     energy = 0
     best = huge(best)
     steps = 0
+    won = .false.
     call try(c)
-    do i=1,16
+
+    !call dump(c)
+
+    do i=1,size(steps)
         if (steps(i) /= 0) then
             !print *, steps(i)
             !call dump(winner(i))
         end if
     end do
-    part(1) = best
-    part(2) = 0
+    solve_cave = best
 end function
+
 
 subroutine check_line(fd, s)
     integer, intent(in) :: fd
@@ -87,19 +134,13 @@ subroutine check_line(fd, s)
     end if
 end subroutine
 
-subroutine parse_podline(c, fd, bot)
+subroutine parse_podline(c, line, stack)
     type(cave), intent(inout) :: c
-    integer, intent(in) :: fd
-    logical, intent(in) :: bot
-    character(15) :: line
+    integer, intent(in) :: stack
+    character(15), intent(in) :: line
     integer :: i, n
     integer :: pos
 
-    call read_line(fd, line)
-
-    if (.not. (bot .or. (line(:2) == '##' .and. line(12:) == '##'))) then
-        error stop
-    end if
     do i=3,11,2
         if (line(i:i) /= '#') then
             error stop
@@ -111,18 +152,14 @@ subroutine parse_podline(c, fd, bot)
         if (n < 1 .or. n > 4) then
             error stop
         end if
-        if (c%p(n)%pos /= 0) then
+        do while (c%p(n)%pos /= 0)
             n = n + 4
-            if (c%p(n)%pos /= 0) then
+            if (n > npods) then
                 error stop
             end if
-        end if
+        end do
         c%p(n)%pos = pos
-        c%p(n)%bot = bot
-        if (bot .and. pos == homepos(n)) then
-            c%p(n)%home = .true.
-            c%blocked(pos) = -3
-        end if
+        c%p(n)%stack = stack
     end do
 end subroutine
 
@@ -133,20 +170,27 @@ recursive subroutine move_pod(c, copy, n)
     integer :: prev_e
     integer :: dist
     integer :: depth = 0
-    logical :: won(16) = .false.
+    logical :: allow
 
     depth = depth + 1
     prev_e = energy
-    dist = abs(c%p(n)%pos - copy%p(n)%pos) + 1
-    if (copy%p(n)%bot) then
-        dist= dist + 1
-    end if
+    dist = abs(c%p(n)%pos - copy%p(n)%pos) + 1 + (nlines - copy%p(n)%stack)
     energy = energy + dist * move_cost(n)
-    if (energy < best) then
-        if (depth < 3) then
-            !print *, "move", int(n, kind=1), energy, depth
+    if (force(depth) == 0) then
+        allow = .true.
+    else if (n /= force(depth)) then
+        allow = .false.
+    else
+        allow = .true.
+        if (forcepos(depth) /= 0 .and. copy%p(n)%pos /= forcepos(depth)) then
+            allow = .false.
         end if
-        if (all(copy%p%home)) then
+    end if
+    if (energy < best .and. allow) then
+        if (depth < 3) then
+            !print *, "move ", pod_name(n:n), int(copy%p(n)%pos, kind=1), copy%p(n)%stack, depth
+        end if
+        if (all(copy%p(:npods)%home)) then
             !print *, "Win", energy
             won(:depth) = .true.
             best = energy
@@ -167,6 +211,19 @@ recursive subroutine move_pod(c, copy, n)
     copy%blocked = c%blocked
 end subroutine
 
+subroutine fixup(c, pos)
+    type(cave), intent(inout) :: c
+    integer, intent(in) :: pos
+    integer :: n
+
+    do n=1,npods
+        if (homepos(n) == pos .and. c%p(n)%pos == pos) then
+            c%p(n)%home = .true.
+            c%blocked(pos) = -2
+        end if
+    end do
+end subroutine
+
 recursive subroutine try(c)
     type(cave), intent(in) :: c
     type(cave) :: copy
@@ -175,40 +232,37 @@ recursive subroutine try(c)
     integer :: pos, oldpos
 
     copy = c
-    do n=1,8
-        if (c%p(n)%home) then
+
+    do n=1,npods
+        if (copy%p(n)%home) then
             cycle
         end if
         oldpos = c%p(n)%pos
         if (c%p(n)%moved) then
             pos = homepos(n)
-            i = c%blocked(pos)
-            if (hall_clear(c, oldpos, pos) .and. i >= 0) then
+            i = copy%blocked(pos)
+            if (hall_clear(c, oldpos, pos) .and. i < 0) then
                 copy%p(n)%pos = pos
-                copy%p(n)%bot = (i == 0)
+                copy%p(n)%stack = - i
                 copy%p(n)%home = .true.
-                copy%blocked(pos) = i + 1
+                copy%blocked(pos) = i - 1
                 copy%blocked(oldpos) = 0
                 call move_pod(c, copy, n)
             end if
         else
-            if (c%p(n)%bot .and. c%blocked(c%p(n)%pos) == -2) then
+            if (c%p(n)%stack <= c%blocked(oldpos)) then
                 cycle
             end if
             do i=1,size(hallpos)
                 pos = hallpos(i)
                 if (hall_clear(c, oldpos, pos) .and. c%blocked(pos) == 0) then
                     copy%blocked(pos) = 10
-                    select case (copy%blocked(c%p(n)%pos))
-                    case (-2, -1)
-                        copy%blocked(c%p(n)%pos) = copy%blocked(c%p(n)%pos) + 1
-                    case (-3)
-                        copy%blocked(c%p(n)%pos) = 1
-                    case default
-                        error stop
-                    end select
+                    copy%blocked(oldpos) = copy%blocked(oldpos) - 1
                     copy%p(n)%pos = pos
                     copy%p(n)%moved = .true.
+                    if (c%p(n)%stack == 2) then
+                        call fixup(copy, oldpos)
+                    end if
                     call move_pod(c, copy, n)
                 end if
             end do
@@ -247,38 +301,31 @@ end subroutine
 subroutine dump(c)
     type(cave), intent(in) :: c
     character(13) :: s
-    integer :: n, i, pos
+    integer :: n, i, pos, stack
     print "(a13)", '#############'
     s = '#...........#'
     do i=1,size(hallpos)
         pos = hallpos(i)
-        do n=1,8
+        do n=1,npods
             if (c%p(n)%pos == pos) then
                 s(pos+1:pos+1) = pod_name(n:n)
             end if
         end do
     end do
     print "(a13)", s
-    s = '###.#.#.#.###'
-    do i=1,size(homepos)
-        pos = homepos(i)
-        do n=1,8
-            if (c%p(n)%pos == pos .and. .not. c%p(n)%bot) then
-                s(pos+1:pos+1) = pod_name(n:n)
-            end if
+    do stack=nlines,1,-1
+        s = '###.#.#.#.###'
+        do i=1,4
+            pos = homepos(i)
+            do n=1,npods
+                if (c%p(n)%pos == pos .and. c%p(n)%stack == stack) then
+                    s(pos+1:pos+1) = pod_name(n:n)
+                end if
+            end do
         end do
+        print "(a13)", s
     end do
-    print "(a13)", s
     s = '  #.#.#.#.#  '
-    do i=1,size(homepos)
-        pos = homepos(i)
-        do n=1,8
-            if (c%p(n)%pos == pos .and. c%p(n)%bot) then
-                s(pos+1:pos+1) = pod_name(n:n)
-            end if
-        end do
-    end do
-    print "(a13)", s
     print "(a13)", '  #########  '
 end subroutine
 
