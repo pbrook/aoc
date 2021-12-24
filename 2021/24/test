@@ -1,0 +1,14 @@
+-4  6 push w+12
++5  5 push w+8
+-3  4 push w+7
++7  1 push w+4
+-7  1 pop w-11 (+4)
+ 0  2 push w+1
+ 0  2 pop w-1 (+10)
+-5  3 push w+8
++5  3 pop w-3 (+12)
++3  4 pop w-4 (+10)
+-5  5 pop w-13 (+15)
++4  6 pop w-8 (+4)
++1  7 push w+10
+-1  7 pop w-11 (+9)
