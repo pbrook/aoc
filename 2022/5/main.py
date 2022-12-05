@@ -13,7 +13,19 @@ def dump(stacks):
         print(line)
     print("".join(f" {n+1}  " for n in range(len(stacks))))
 
-def part1(filename):
+def part1(stacks, n, ifrom, ito):
+    for _ in range(n):
+        stacks[ito].append(stacks[ifrom].pop())
+
+def part2(stacks, n, ifrom, ito):
+    stacks[ito] += stacks[ifrom][-n:]
+    del stacks[ifrom][-n:]
+
+def top(stacks):
+    #dump(stacks)
+    return "".join(s[-1] for s in stacks)
+
+def crates(filename, part):
     stacks = [[]]
     with open(filename, "r") as f:
         for line in f:
@@ -42,12 +54,14 @@ def part1(filename):
             n = int(insn[1])
             ifrom = int(insn[3]) - 1
             ito = int(insn[5]) - 1
-            for _ in range(n):
-                stacks[ito].append(stacks[ifrom].pop())
+
+            part(stacks, n, ifrom, ito)
+
             #dump(stacks)
-    #dump(stacks)
-    return "".join(s[-1] for s in stacks)
+    return top(stacks)
 
-assert part1("test1") == "CMZ"
+assert crates("test1", part1) == "CMZ"
+assert crates("test1", part2) == "MCD"
 
-print(part1("input"))
+print(crates("input", part1))
+print(crates("input", part2))
