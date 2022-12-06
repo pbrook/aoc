@@ -1,20 +1,34 @@
 #! /usr/bin/env python3
 
-def sop(filename):
+def sop(filename, n):
     with open(filename, "r") as f:
         buffer = f.read().strip()
 
-    n = 4
+    pos = 0
     while True:
-        s = set(buffer[n-4:n])
-        if len(s) == 4:
-            return n
-        n += 1
+        s = set(buffer[pos:pos+n])
+        if len(s) == n:
+            return pos + n
+        pos += 1
 
-assert sop("test1") == 7
-assert sop("test2") == 5
-assert sop("test3") == 6
-assert sop("test4") == 10
-assert sop("test5") == 11
+def part1(filename):
+    return sop(filename, 4)
 
-print(sop("input"))
+def part2(filename):
+    return sop(filename, 14)
+
+assert part1("test1") == 7
+assert part1("test2") == 5
+assert part1("test3") == 6
+assert part1("test4") == 10
+assert part1("test5") == 11
+
+print(part1("input"))
+
+assert part2("test1") == 19
+assert part2("test2") == 23
+assert part2("test3") == 23
+assert part2("test4") == 29
+assert part2("test5") == 26
+
+print(part2("input"))
