@@ -8,6 +8,8 @@ class File:
         return self._size
     def part1(self):
        yield from ()
+    def part2(self, target):
+        return 0
 
 class Dir:
     def __init__(self, parent):
@@ -24,8 +26,17 @@ class Dir:
             yield size
         for c in self.contents.values():
             yield from c.part1()
+    def part2(self, target):
+        size = self.size()
+        for c in self.contents.values():
+            other = c.part2(target)
+            if size < target:
+                size = other
+            elif other >= target and other < size:
+                size = other
+        return size
 
-def part1(filename):
+def walk(filename):
     root = Dir(None)
     with open(filename, "r") as f:
         for line in f:
@@ -46,8 +57,11 @@ def part1(filename):
             else:
                 size, name = line.split()
                 curdir.contents[name] = File(curdir, int(size))
-    return sum(root.part1())
+    p1 = sum(root.part1())
+    target = (root.size() + 30000000) - 70000000
+    p2 = root.part2(target)
+    return (p1, p2)
 
-assert part1("test1") == 95437
+assert walk("test1") == (95437, 24933642)
 
-print(part1("input"))
+print(walk("input"))
