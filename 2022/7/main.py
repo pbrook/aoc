@@ -6,10 +6,8 @@ class File:
         self._size = size
     def size(self):
         return self._size
-    def part1(self):
+    def dirsize(self):
        yield from ()
-    def part2(self, target):
-        return 0
 
 class Dir:
     def __init__(self, parent):
@@ -20,21 +18,10 @@ class Dir:
         for c in self.contents.values():
             size += c.size()
         return size
-    def part1(self):
-        size = self.size()
-        if size <= 100000:
-            yield size
+    def dirsize(self):
+        yield self.size()
         for c in self.contents.values():
-            yield from c.part1()
-    def part2(self, target):
-        size = self.size()
-        for c in self.contents.values():
-            other = c.part2(target)
-            if size < target:
-                size = other
-            elif other >= target and other < size:
-                size = other
-        return size
+            yield from c.dirsize()
 
 def walk(filename):
     root = Dir(None)
@@ -57,9 +44,10 @@ def walk(filename):
             else:
                 size, name = line.split()
                 curdir.contents[name] = File(curdir, int(size))
-    p1 = sum(root.part1())
+    sz = list(root.dirsize())
+    p1 = sum(s for s in sz if s < 100000)
     target = (root.size() + 30000000) - 70000000
-    p2 = root.part2(target)
+    p2 = min(s for s in sz if s >= target)
     return (p1, p2)
 
 assert walk("test1") == (95437, 24933642)
