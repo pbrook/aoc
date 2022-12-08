@@ -5,36 +5,72 @@ class Tree:
         self.height = height
         self.visible = False
 
-def scan(rows, cols):
-    for y in range(cols):
-        yield ((x, y) for x in range(rows))
-        yield ((rows - (x + 1), y) for x in range(rows))
-    for x in range(rows):
-        yield ((x, y) for y in range(cols))
-        yield ((x, cols - (y + 1)) for y in range(cols))
+class Forest:
+    def __init__(self, filename):
+        self.grid = {}
+        x = 0
+        y = 0
+        with open(filename, "r") as f:
+            for line in f:
+                line = line.strip()
+                for x, c in enumerate(line):
+                    self.grid[(x, y)] = Tree(int(c))
+                y += 1
+        self.cols = x + 1
+        self.rows = y
 
-def part1(filename):
-    forest = {}
-    x = 0
-    y = 0
-    with open(filename, "r") as f:
-        for line in f:
-            line = line.strip()
-            for x, c in enumerate(line):
-                forest[(x, y)] = Tree(int(c))
-            y += 1
-    rows = x + 1
-    cols = y
-    for ray in scan(cols, rows):
-        tall = -1
+    def height(self, pos):
+        return self.grid[pos].height
+
+    def scan(self):
+        for y in range(self.rows):
+            yield ((x, y) for x in range(self.cols))
+            yield ((self.cols - (x + 1), y) for x in range(self.cols))
+        for x in range(self.cols):
+            yield ((x, y) for y in range(self.rows))
+            yield ((x, self.rows - (y + 1)) for y in range(self.rows))
+
+    def treeline(self, ray):
+        pos = next(ray)
+        tall = self.height(pos)
+        n = 1
         for pos in ray:
-            height = forest[pos].height
-            if height > tall:
-                forest[pos].visible = True
-                tall = height
-    return sum(1 for t in forest.values() if t.visible)
+            if self.height(pos) >= tall:
+                break
+            n += 1
+        return n
 
+    def look_from(self, x0, y0):
+        total = 1
+        total *= self.treeline((x, y0) for x in range(x0, self.cols - 1))
+        total *= self.treeline((x, y0) for x in range(x0, 0, -1))
+        total *= self.treeline((x0, y) for y in range(y0, self.rows - 1))
+        total *= self.treeline((x0, y) for y in range(y0, 0, -1))
+        return total
 
-assert part1("test1") == 21
+    def part1(self):
+        for ray in self.scan():
+            tall = -1
+            for pos in ray:
+                height = self.height(pos)
+                if height > tall:
+                    self.grid[pos].visible = True
+                    tall = height
+        return sum(1 for t in self.grid.values() if t.visible)
 
-print(part1("input"))
+    def part2(self):
+        best = 0
+        for x in range(1, self.cols - 1):
+            for y in range(1, self.rows - 1):
+                n = self.look_from(x, y)
+                if n > best:
+                    best = n
+        return best
+
+def treehouse(filename):
+    wood = Forest(filename)
+    return (wood.part1(), wood.part2())
+
+assert treehouse("test1") == (21, 8)
+
+print(treehouse("input"))
