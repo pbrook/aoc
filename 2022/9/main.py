@@ -8,36 +8,54 @@ def signval(x):
     else:
         return -1
 
-def rope_walk(filename):
-    tail_x = 0
-    tail_y = 0
-    dx = 0
-    dy = 0
-    trail = set([(tail_x, tail_y)])
+class Knot():
+    def __init__(self, other):
+        self.x = 0
+        self.y = 0
+        self.other = other
+
+    def move(self, d):
+        if d == "R":
+            self.x += 1
+        elif d == "L":
+            self.x -= 1
+        elif d == "U":
+            self.y += 1
+        elif d == "D":
+            self.y -= 1
+        else:
+            assert False
+        self.pull()
+
+    def pull(self):
+        other = self.other
+        if other is None:
+            return
+        dx = self.x - other.x
+        dy = self.y - other.y
+        if abs(dx) > 1 or abs(dy) > 1:
+            other.x += signval(dx)
+            other.y += signval(dy)
+            other.pull()
+    def __repr__(self):
+        return f"<{self.x},{self.y}>"
+
+def rope_walk(filename, rope_len):
+    tail = Knot(None)
+    head = tail
+    for _ in range(rope_len):
+        head = Knot(head)
+    trail = set([(0,0)])
     with open(filename, "r") as f:
         for line in f:
             d, n = line.split()
             for _ in range(int(n)):
-                if d == "R":
-                    dx += 1
-                elif d == "L":
-                    dx -= 1
-                elif d == "U":
-                    dy += 1
-                elif d == "D":
-                    dy -= 1
-                else:
-                    assert false
-                if abs(dx) > 1 or abs(dy) > 1:
-                    s = signval(dx)
-                    tail_x += s
-                    dx -= s
-                    s = signval(dy)
-                    tail_y += s
-                    dy -= s
-                    trail.add((tail_x, tail_y))
+                head.move(d)
+                trail.add((tail.x, tail.y))
     return len(trail)
 
-assert rope_walk("test1") == 13
+assert rope_walk("test1", 1) == 13
+assert rope_walk("test2", 9) == 36
 
-print(rope_walk("input"))
+print(rope_walk("input", 1))
+print(rope_walk("input", 9))
