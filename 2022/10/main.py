@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+import ocr
+
 class Cpu:
     def __init__(self, filename):
         self.signal = 0
@@ -48,5 +50,6 @@ assert c.part1() == 13140
 assert c.part2() == s
 
 c = Cpu("input")
-print(c.part1())
 print("\n".join(c.part2()))
+print(c.part1())
+print(ocr.ocr(c.part2()))
