@@ -28,21 +28,25 @@ class Hill:
                 yield newpos
 
     def walk(self):
-        pending = [(self.end, 25, 0)]
+        pending = [self.end]
+        p = self.grid[self.end]
+        p.distance = 0
+
         while pending:
-            pos, height, step = pending.pop()
+            pos = pending.pop()
             p = self.grid[pos]
-            if p.height < height - 1:
-                continue
-            if p.distance <= step:
-                continue
-            #print(f"{pos} {height} {step}")
-            p.distance = step
-            step += 1
+            step = p.distance + 1
             x, y = pos
             for newpos in [(x, y+1), (x, y-1), (x+1, y), (x-1, y)]:
-                if newpos in self.grid:
-                    pending.append((newpos, p.height, step))
+                np = self.grid.get(newpos)
+                if np is None:
+                    continue
+                if np.height < p.height - 1:
+                    continue
+                if step >= np.distance:
+                    continue
+                np.distance = step
+                pending.append(newpos)
         return self.grid[self.start].distance
 
     def part2(self):
