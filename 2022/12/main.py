@@ -28,12 +28,11 @@ class Hill:
                 yield newpos
 
     def walk(self):
-        pending = [(self.start, 0, 0)]
+        pending = [(self.end, 25, 0)]
         while pending:
             pos, height, step = pending.pop()
             p = self.grid[pos]
-            #if abs(p.height - height) > 1:
-            if p.height > height + 1:
+            if p.height < height - 1:
                 continue
             if p.distance <= step:
                 continue
@@ -44,12 +43,16 @@ class Hill:
             for newpos in [(x, y+1), (x, y-1), (x+1, y), (x-1, y)]:
                 if newpos in self.grid:
                     pending.append((newpos, p.height, step))
-        return self.grid[self.end].distance
+        return self.grid[self.start].distance
+
+    def part2(self):
+        return min(p.distance for p in self.grid.values() if p.height == 0)
 
 def climb(filename):
     h = Hill(filename)
-    return h.walk()
+    part1 = h.walk()
+    return (part1, h.part2())
 
-assert climb("test1") == 31
+assert climb("test1") == (31, 29)
 
 print(climb("input"))
