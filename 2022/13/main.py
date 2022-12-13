@@ -42,20 +42,33 @@ def compare(a, b):
                 return False
     return None
 
+class Packet:
+    def __init__(self, s):
+        self.val, s = parse_list(s)
+        assert s == ""
+
+    def __lt__(self, other):
+        rc = compare(self.val, other.val)
+        assert rc is not None
+        return rc
+
 def part1(filename):
     total = 0
     with open(filename, "r") as f:
         s = f.read().rstrip()
+    d1 = Packet("[[2]]")
+    d2 = Packet("[[6]]")
+    msg = [d1, d2]
     for n, p in enumerate(s.split("\n\n")):
-        astr, bstr = p.split("\n")
-        a, _ = parse_list(astr)
-        b, _ = parse_list(bstr)
-        rc = compare(a, b)
-        assert rc is not None
-        if rc:
+        a, b = (Packet(x) for x in p.split("\n"))
+        if a < b:
             total += n + 1
-    return total
+        msg.extend([a, b])
+    msg.sort()
+    p1 = msg.index(d1) + 1
+    p2 = msg.index(d2) + 1
+    return total, p1 * p2
 
-assert part1("test1") == 13
+assert part1("test1") == (13, 140)
 
 print(part1("input"))
