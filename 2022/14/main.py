@@ -44,10 +44,12 @@ class Cave:
 
     def pour(self):
         count = 0
+        part1 = 0
         maxy = max(y for _, y in self.grid)
+        start = (500, 0)
         y = 0
-        while y <= maxy:
-            x, y = 500, 0
+        while start not in self.grid:
+            x, y = start
             while y <= maxy:
                 moved = False
                 for dx, dy in [(0, 1), (-1, 1), (1, 1)]:
@@ -57,17 +59,20 @@ class Cave:
                         moved = True
                         break
                 if not moved:
-                    count += 1
-                    self.grid[(x, y)] = 'o'
                     break
-        return count
+            if moved and part1 == 0:
+                part1 = count
+            self.grid[(x, y)] = 'o'
+            count += 1
+        return (part1, count)
 
-def part1(filename):
+def regolith(filename):
     c = Cave(filename)
     n = c.pour()
-    c.dump()
+    #c.dump()
     return n
 
-assert part1("test1") == 24
+#print(regolith("test1"))
+assert regolith("test1") == (24, 93)
 
-print(part1("input"))
+print(regolith("input"))
