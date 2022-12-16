@@ -22,25 +22,40 @@ class Sensor:
             return None
         return (self.x - dist, self.x + dist)
 
-def part1(filename, y0):
+def scan(filename, y0):
     with open(filename, "r") as f:
         sens = [Sensor(line) for line in f]
 
-    intervals = [iv for iv in (s.interval(y0) for s in sens) if iv is not None]
-    intervals.sort(key=lambda x: x[0])
-    count = 0
-    x = intervals[0][0]
-    for start, end in intervals:
-        if start > x:
-            x = start
-        if end >= x:
-            count += end + 1 - x
-            x = end + 1
-    bx = set(s.bx for s in sens if s.by == y0)
-    return count - len(bx)
+    part2 = -1
+    part1 = -1
+    for y in range(y0 * 2 + 1):
+        intervals = [iv for iv in (s.interval(y) for s in sens) if iv is not None]
+        intervals.sort(key=lambda x: x[0])
+        count = 0
+        x = intervals[0][0] - 1
+        for start, end in intervals:
+            skip = start - (x + 1)
+            if skip > 0:
+                if start > 0 and x < y0 * 2:
+                    assert skip == 1
+                    assert part2 == -1
+                    part2 = (x + 1) * 4000000 + y
+                    if part1 >= 0:
+                        break
+                x = start
+            if end >= x:
+                count += end - x
+                x = end
+        if y == y0:
+            bx = set(s.bx for s in sens if s.by == y0)
+            part1 = count - len(bx)
+            if part2 >= 0:
+                break
+
+    return (part1, part2)
 
 
 
-assert part1("test1", 10) == 26
+assert scan("test1", 10) == (26, 56000011)
 
-print(part1("input", 2000000))
+print(scan("input", 2000000))
