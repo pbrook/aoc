@@ -51,12 +51,12 @@ def makeshapes():
 ##
 """
     ns = [Shape(p) for p in pattern.split("\n\n")]
-    return itertools.cycle(ns)
+    return (itertools.cycle(ns), len(ns))
 
 def parse(filename):
     with open(filename, "r") as f:
         m = [(1 if c == '>' else -1) for c in f.read().strip()]
-        return itertools.cycle(m)
+    return (itertools.cycle(m), len(m))
 
 PW = 7
 
@@ -65,33 +65,68 @@ def dump(pit):
         s = "".join(('#' if ((n & (1 << i)) != 0) else '.') for i in range(7))
         print(s)
 
-def part1(filename):
-    shapes = makeshapes()
-    moves = parse(filename)
-    pit = []
-    for _ in range(2022):
-        sx = 2
-        sy = len(pit) + 3
-        s = next(shapes)
+class World:
+    def __init__(self, filename):
+        self.shapes, self.shapecount = makeshapes()
+        self.moves, self.movecount = parse(filename)
+        self.movepos = 0
+        self.pit = []
+
+    def run(self, count):
+        pit = self.pit
+        for _ in range(count):
+            sx = 2
+            sy = len(pit) + 3
+            s = next(self.shapes)
+            while True:
+                nx = sx + next(self.moves)
+                self.movepos = (self.movepos + 1) % self.movecount
+                if s.fit(pit, nx, sy):
+                    sx = nx
+                if s.fit(pit, sx, sy - 1):
+                    sy -= 1
+                else:
+                    break
+            for n in s.p:
+                n <<= sx
+                if len(pit) <= sy:
+                    pit.append(n)
+                else:
+                    pit[sy] |= n
+                sy += 1
+            #print(_)
+            #dump(pit)
+        return len(pit)
+
+def run(filename):
+    w = World(filename)
+    part1 = w.run(2022)
+    cur = part1
+    results = []
+    total = 2022
+    for _ in range(10):
+        prev = cur
+        mp = w.movepos
+        tp = total
         while True:
-            nx = sx + next(moves)
-            if s.fit(pit, nx, sy):
-                sx = nx
-            if s.fit(pit, sx, sy - 1):
-                sy -= 1
-            else:
-                break
-        for n in s.p:
-            n <<= sx
-            if len(pit) <= sy:
-                pit.append(n)
-            else:
-                pit[sy] |= n
-            sy += 1
-        #print(_)
-        #dump(pit)
-    return len(pit)
+            total += w.shapecount
+            cur = w.run(w.shapecount)
+            if mp == w.movepos:
+                break;
+        results.append((total - tp, cur - prev))
+    assert all(r == results[0] for r in results)
 
-assert part1("test1") == 3068
+    block_s, block_h = results[0]
 
-print(part1("input"))
+    remain = 1000000000000 - total
+    nblocks = remain // block_s
+    offset = remain % block_s
+    if offset > 0:
+        cur = w.run(offset)
+    part2 = cur + nblocks * block_h
+
+    return part1, part2
+
+assert run("test1") == (3068, 1514285714288)
+
+print(run("input"))
