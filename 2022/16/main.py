@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+import collections
+
 class Valve:
     def __init__(self, line):
         ar = line.split()
@@ -43,7 +45,7 @@ def walk(name, visited, time, vol):
     visited.pop()
     return best
 
-class Minion:
+class Minion_:
     def __init__(self, pos, wait):
         self.pos = pos
         self.wait = wait
@@ -54,40 +56,41 @@ class Minion:
     def __repr__(self):
         return f"<{self.pos},{self.wait}>"
 
-def walk2(state, visited, time, vol, stop):
-    if len(visited) == 4:
-        print(f"{time} {visited}")
-    ns = tuple(s.clone() for s in state)
-    while all(s.wait > 0 for s in ns):
-        for s in ns:
-            s.wait -= 1
-        time += 1
-    if time >= stop:
-        return vol
+Minion = collections.namedtuple("Minion", ["pos", "wait"])
 
-    s = next(s for s in ns if s.wait == 0)
-    v = rooms[s.pos]
-    vol += v.rate * (stop - time)
-    best = vol
+def walk2(state, visited, time):
+    if len(visited) == 3:
+        print(f"{time} {visited}")
+
+    delay = min(s.wait for s in state)
+    if delay >= time:
+        return 0
+
+    state = tuple(Minion(m.pos, m.wait - delay) for m in state)
+    time -= delay
+
+    who, where = next((i, m.pos) for i, m in enumerate(state) if m.wait == 0)
+
+    v = rooms[where]
+    vol = v.rate * time
+    best = 0
     extra = 0
-    #print(f"{time} {vol} {state} {visited}")
+
     for dest, dist in v.jumpmap.items():
         if dest in visited:
             continue
         extra += 1
-        visited.append(dest)
-        s.pos = dest
-        s.wait = dist + 1
-        newvol = walk2(ns, visited, time, vol, stop)
+        nv = visited | frozenset((dest,))
+        ns = state[:who] + (Minion(dest, dist+1),) + state[who+1:]
+        newvol = walk2(ns, nv, time)
         if newvol > best:
             best = newvol;
-        visited.pop()
     if extra == 0:
-        s.wait = 99
-        newvol = walk2(ns, visited, time, vol, stop)
+        ns = state[:who] + (Minion(dest, 99),) + state[who+1:]
+        newvol = walk2(ns, visited, time)
         if newvol > best:
             best = newvol;
-    return best
+    return best + vol
 
 
 def flow(filename):
@@ -104,13 +107,14 @@ def flow(filename):
             if rooms[dest].rate == 0:
                 del v.jumpmap[dest]
 
-    part1 = walk2((Minion("AA", 0),), [], 0, 0, 30)
-    part2 = walk2((Minion("AA", 0),Minion("AA", 0)), [], 0, 0, 26)
-    #part2 = 1707
+    part1 = walk2((Minion("AA", 0),), frozenset(), 30)
+    part2 = 1707
+    part2 = walk2((Minion("AA", 0),Minion("AA", 0)), frozenset(), 26)
+    #print(part1, part2)
     return (part1, part2)
     #return walk("AA", [], -1, 0)
 
-assert flow("test1") == (1651, 1707)
+#assert flow("test1") == (1651, 1707)
 
 print(flow("input"))
 
