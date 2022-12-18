@@ -7,18 +7,38 @@ def parse(filename):
 def add(pos, dim, n):
     return pos[:dim] + (pos[dim] + n,) + pos[dim+1:]
 
-def part1(filename):
-    area = 0
+def near(pos):
+    for dim in range(3):
+        yield add(pos, dim, 1)
+        yield add(pos, dim, -1)
+
+def cool(filename):
     lava = parse(filename)
+    low = [(min(p[i] for p in lava)-1) for i in range(3)]
+    high = [(max(p[i] for p in lava)+1) for i in range(3)]
+    part1 = 0
     for pos in lava:
-        for dim in range(3):
-            if add(pos, dim, 1) not in lava:
-                area += 1
-            if add(pos, dim, -1) not in lava:
-                area += 1
-    return area
+        part1 += sum(1 for p in near(pos) if p not in lava)
 
-assert part1("test1") == 10
-assert part1("test2") == 64
+    air = set()
+    start = tuple(low)
+    air.add(start)
+    pending = [start]
+    part2 = 0
+    while pending:
+        pos = pending.pop()
+        for p in near(pos):
+            if any(pos[dim] < low[dim] or pos[dim] > high[dim] for dim in range(3)):
+                continue
+            if p in lava:
+                part2 += 1
+            elif p not in air:
+                air.add(p)
+                pending.append(p)
 
-print(part1("input"))
+    return part1, part2
+
+assert cool("test1") == (10, 10)
+assert cool("test2") == (64, 58)
+
+print(cool("input"))
