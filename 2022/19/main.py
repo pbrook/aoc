@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-N = 24
+N = 32
 
 class Blueprint:
     def __init__(self, line):
@@ -26,24 +26,27 @@ class Blueprint:
         time -= 1
         if time == 0:
             return nr["geode"]
-        for name, cost in self.cost.items():
+        for name in ["geode", "obsidian", "clay", "ore"]:
             if name in ignore:
                 continue
             if bots[name] >= self.max[name]:
                 continue
+            cost = self.cost[name]
             if any(res[r] < n for r, n in cost):
                 continue
-            ignore.add(name)
             nrb = nr.copy()
             for r, n in cost:
                 nrb[r] -= n
             nb = bots.copy()
+            ignore.add(name)
             nb[name] += 1
             if time >= N:
                 print(f"  {time} {name}")
             count = self.tick(nb, nrb, time)
             if count > best:
                 best = count
+            if name == "geode":
+                break
         if "geode" not in ignore:
             if time >= N:
                 print(f"  {time} -")
@@ -57,29 +60,25 @@ def parse(filename):
         return [Blueprint(line) for line in f]
 
 
-def part1(filename):
+def mine(filename):
     blueprints = parse(filename)
     nothing = dict((x, 0) for x in blueprints[0].cost.keys())
     bots = nothing.copy()
     bots["ore"] = 1
-    quality = 0
+    part1 = 0
     for i, bp in enumerate(blueprints):
         count = bp.tick(bots=bots, res=nothing, time=24)
-        print(i+1, count)
-        quality += (i+1) * count
-    return quality
-
-def part2(filename):
-    blueprints = parse(filename)
-    nothing = dict((x, 0) for x in blueprints[0].cost.keys())
-    bots = nothing.copy()
-    bots["ore"] = 1
-    prod = 1
-    for i, bp in enumerate(blueprints[1:3]):
+        #print(i+1, count)
+        part1 += (i+1) * count
+    part2 = 1
+    for i, bp in enumerate(blueprints[:3]):
         count = bp.tick(bots=bots, res=nothing, time=32)
-        print(i+1, count)
-        prod *= count
-    return prod
+        #print(i+1, count)
+        part2 *= count
+    print(part1, part2)
+    return part1, part2
 
-print(part1("test1"))
-print(part1("input"))
+# This takes several times longer to run than my input (90s v.s. 16s)!
+assert mine("test1") == (33, 56 * 62)
+
+print(mine("input"))
