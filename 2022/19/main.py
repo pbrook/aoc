@@ -2,6 +2,8 @@
 
 N = 32
 
+all_types = ["geode", "obsidian", "clay", "ore"]
+
 class Blueprint:
     def __init__(self, line):
         self.cost = {}
@@ -16,17 +18,26 @@ class Blueprint:
             self.cost[ar[1]] = cost
             for rr, n in cost:
                 self.max[rr] = max(n, self.max.get(rr, 0))
+        self.best = None
+        assert set(all_types) == set(self.cost.keys())
     def __repr__(self):
         return f"<{self.cost}>"
     def tick(self, bots, res, time, ignore=None):
         if ignore is None:
             ignore = set()
-        best = 0
+        best = res["geode"]
+        best += (bots["geode"] * time) + (time * (time - 1))//2
+        if best < self.best:
+            return
         nr = dict((r, n + res[r]) for r, n in bots.items())
         time -= 1
         if time == 0:
-            return nr["geode"]
-        for name in ["geode", "obsidian", "clay", "ore"]:
+            best = nr["geode"]
+            if best > self.best:
+                self.best = best
+            return
+        best = 0
+        for name in all_types:
             if name in ignore:
                 continue
             if bots[name] >= self.max[name]:
@@ -42,23 +53,17 @@ class Blueprint:
             nb[name] += 1
             if time >= N:
                 print(f"  {time} {name}")
-            count = self.tick(nb, nrb, time)
-            if count > best:
-                best = count
+            self.tick(nb, nrb, time)
             if name == "geode":
                 break
         if "geode" not in ignore:
             if time >= N:
                 print(f"  {time} -")
-            count = self.tick(bots, nr, time, ignore)
-            if count > best:
-                best = count
-        return best
+            self.tick(bots, nr, time, ignore)
 
 def parse(filename):
     with open(filename, "r") as f:
         return [Blueprint(line) for line in f]
-
 
 def mine(filename):
     blueprints = parse(filename)
@@ -67,18 +72,21 @@ def mine(filename):
     bots["ore"] = 1
     part1 = 0
     for i, bp in enumerate(blueprints):
-        count = bp.tick(bots=bots, res=nothing, time=24)
+        bp.best = 0
+        bp.tick(bots=bots, res=nothing, time=24)
+        count = bp.best
         #print(i+1, count)
         part1 += (i+1) * count
     part2 = 1
     for i, bp in enumerate(blueprints[:3]):
-        count = bp.tick(bots=bots, res=nothing, time=32)
+        bp.best = 0
+        bp.tick(bots=bots, res=nothing, time=32)
+        count = bp.best
         #print(i+1, count)
         part2 *= count
-    print(part1, part2)
+    #print(part1, part2)
     return part1, part2
 
-# This takes several times longer to run than my input (90s v.s. 16s)!
 assert mine("test1") == (33, 56 * 62)
 
 print(mine("input"))
