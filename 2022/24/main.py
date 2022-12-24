@@ -41,43 +41,47 @@ class Storm():
         return self.ar[n]
 
     def walk(self, start, target, steps):
-        steps += 1
-        while start in self.get(steps):
-            steps += 1
-        done = set()
-        x, y = start
-        stack = [(dist(x, y, target) + steps, x, y, steps)]
-        while stack:
-            stack.sort(reverse=True)
-            _, x, y, steps = stack.pop()
-            #print(x, y, steps, _, len(stack))
-            steps += 1
+        while True:
+            start_step = steps + 1
+            while start in self.get(start_step):
+                start_step += 1
+            done = set()
+            x, y = start
+            stack = [(dist(x, y, target) + start_step, x, y, start_step)]
+            while stack:
+                stack.sort(reverse=True)
+                _, x, y, steps = stack.pop()
+                #print(x, y, steps, _, len(stack))
+                steps += 1
 
-            newpos = set()
-            for dx, dy in ortho:
-                if (x + dx) in range(self.width) and (y+dy) in range(self.height):
-                    newpos.add((x+dx, y+dy))
-            if len(newpos) == 0:
-                continue
-            newpos.difference_update(self.get(steps))
-            for x, y in newpos:
-                limit = dist(x, y, target)
-                #print(f" {x} {y} {limit}")
-                if limit == 0:
-                    return steps + 1
-                else:
-                    if (x, y, steps) not in done:
-                        done.add((x, y, steps))
-                        stack.append((limit+steps, x, y, steps))
-        assert False
+                newpos = set()
+                for dx, dy in ortho:
+                    if (x + dx) in range(self.width) and (y+dy) in range(self.height):
+                        newpos.add((x+dx, y+dy))
+                if len(newpos) == 0:
+                    continue
+                newpos.difference_update(self.get(steps))
+                for x, y in newpos:
+                    limit = dist(x, y, target)
+                    #print(f" {x} {y} {limit}")
+                    if limit == 0:
+                        return steps + 1
+                    else:
+                        if (x, y, steps) not in done:
+                            done.add((x, y, steps))
+                            stack.append((limit+steps, x, y, steps))
+            #print(f"fail {start_step}")
 
 def run(filename):
     s = Storm(filename)
     goal = (s.width - 1), (s.height - 1)
     part1 = s.walk((0,0), goal, 0)
-    return part1
+    mid = s.walk(goal, (0,0), part1)
+    part2 = s.walk((0,0), goal, mid)
+    #print(part1, mid, part2)
+    return part1, part2
 
-assert run("test1") == 10
-assert run("test2") == 18
+assert run("test1") == (10, 30)
+assert run("test2") == (18, 54)
 
 print(run("input"))
