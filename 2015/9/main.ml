@@ -9,7 +9,9 @@ let rec combs s =
     in
     List.concat_map inner el
 
-let part1 filename =
+let fold1 f lst = List.fold_left f (List.hd lst) (List.tl lst)
+
+let travel best filename =
     let m = Hashtbl.create 7 in
     let all = ref SS.empty in
     let ic = open_in filename in
@@ -42,9 +44,11 @@ let part1 filename =
         let route_dist s = 
             List.fold_left add_dist (List.hd s, 0) (List.tl s) |> snd
         in
-        List.fold_left min Int.max_int (List.map route_dist (combs !all))
+        fold1 best (List.map route_dist (combs !all))
     end
 
 let () = 
-    assert (part1 "test1" == 605) ;
-    Printf.printf "%d\n" (part1 "input");
+    assert (travel min "test1" == 605) ;
+    assert (travel max "test1" == 982) ;
+    Printf.printf "%d\n" (travel min "input");
+    Printf.printf "%d\n" (travel max "input");
