@@ -48,7 +48,7 @@ let solve circ =
     done;
     Option.get (get "a")
 
-let part1 filename =
+let load filename =
     let circ = Hashtbl.create 400 in
     let ic = open_in filename in
     try
@@ -58,7 +58,18 @@ let part1 filename =
             Hashtbl.replace circ dest gate
         done;
         assert false
-    with End_of_file -> solve circ
+    with End_of_file -> circ
+
+let part1 filename = solve (load filename)
+
+let part2 filename =
+    let circ = load filename in
+    let c2 = Hashtbl.copy circ in
+    let a1 = solve circ in
+    Hashtbl.replace c2 "b" (Int a1);
+    solve c2
+    
 
 let () = 
     Printf.printf "%d\n" (part1 "input");
+    Printf.printf "%d\n" (part2 "input");
