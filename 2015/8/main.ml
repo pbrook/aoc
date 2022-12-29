@@ -21,5 +21,21 @@ let part1 filename =
         assert false
     with End_of_file -> (!raw - !parsed)
 
+let escape n c = match c with
+    | '\\' | '"' -> n + 1
+    | _ -> n
+
+let part2 filename =
+    let extra = ref 0 in
+    let ic = open_in filename in
+    try
+        while true do
+            let line = input_line ic in
+            extra := 2 + String.fold_left escape !extra line
+        done;
+        assert false
+    with End_of_file -> !extra
+
 let () = 
     Printf.printf "%d\n" (part1 "input");
+    Printf.printf "%d\n" (part2 "input");
