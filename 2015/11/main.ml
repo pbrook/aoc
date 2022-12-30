@@ -52,7 +52,7 @@ let s2l ?(ns=false) s =
 
 let l2s s = s |> List.rev |> List.to_seq |> String.of_seq
 
-let part1 s =
+let next_pass s =
     let lst = s2l s in
     let rec loop s = let ns = advance s in
         if is_valid ns then
@@ -68,6 +68,9 @@ let () =
     assert (let lst = s2l ~ns:true "hijklmmn" in find_seq lst && not (find_pair lst));
     assert (let lst = s2l "abbceffg" in find_pair lst && not (find_seq lst));
     assert (let lst = s2l "abbcegjk" in not (find_pair lst));
-    assert (part1 "abcdefgh" |> String.equal "abcdffaa");
-    assert (part1 "ghijklmn" |> String.equal "ghjaabcc");
-    Printf.printf "%s\n" (part1 input);
+    assert (next_pass "abcdefgh" |> String.equal "abcdffaa");
+    assert (next_pass "ghijklmn" |> String.equal "ghjaabcc");
+    let part1 = next_pass input in
+    let part2 = next_pass part1 in
+    Printf.printf "%s\n" part1;
+    Printf.printf "%s\n" part2;
