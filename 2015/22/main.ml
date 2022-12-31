@@ -1,3 +1,5 @@
+let tot = ref 0
+
 let parse filename =
     let hp = ref 0 and damage = ref 0 in
     let ic = open_in filename in
@@ -16,7 +18,7 @@ let parse filename =
 type player_action = Missile | Drain | Shield | Poison | Recharge
 
 exception Finished of int
-let sq = ref []
+let hard = ref false
 
 let rec insert_gs cost gs tail = match tail with
     | [] -> [cost, gs]
@@ -26,7 +28,45 @@ let rec insert_gs cost gs tail = match tail with
         else
             (cost, gs) :: tail
 
-let add_state gs = sq := insert_gs gs#guess gs !sq
+class ['a] search =
+object (_)
+    val ht = Hashtbl.create 1000
+    val mutable sq = []
+    val hits = ref 0
+    method clear =
+        sq <- [];
+        Hashtbl.clear ht;
+        tot := 0;
+        hits := 0
+    method add_state (gs : 'a) =
+        let guess = gs#guess in
+        let hash = gs#hash in
+        let prev = match Hashtbl.find_opt ht hash with
+        | None -> Int.max_int
+        | Some ogs -> ogs
+        in ignore (prev);
+        if guess < prev then begin
+            Hashtbl.replace ht hash guess;
+            sq <- insert_gs guess gs sq;
+        end
+        else incr hits
+    method search =
+        try
+            while sq <> [] do
+                incr tot;
+                let guess, gs = List.hd sq in
+                ignore (guess);
+                (*Printf.printf "%d %d " guess (List.length sq);*)
+                sq <- List.tl sq;
+                gs#play
+            done;
+            assert false
+        with Finished mana -> mana
+    method stats =
+        Printf.printf "stats: %d %d %d\n" !tot (Hashtbl.length ht) !hits
+end
+
+let ss = new search
 
 let action_cost = function
     | Missile -> 53
@@ -49,24 +89,23 @@ object (self)
         stime <- s;
         ptime <- p;
         rtime <- r;
+    method hash =
+        (boss_hp, mana, player_hp, action, stime, ptime, rtime)
     method dump msg =
-        ignore(msg);
-        ()(*
-        Printf.printf "%s %d %d %d %d %d\n" msg spent mana player_hp boss_hp ptime;
-        *)
+        Printf.printf "%s %d %d %d %d %d %d %d\n" msg boss_hp spent mana player_hp stime ptime rtime
     method try_action new_action =
         let cost = action_cost new_action in
         if mana >= cost then begin
             let sg = new game_state (boss_hp, boss_damage) (player_hp, mana) new_action in
             sg#clone (spent+cost) stime ptime rtime;
-            sg#dump "I";
-            add_state sg
+            (*sg#dump "I";*)
+            ss#add_state sg
         end
     method guess =
-        let r = boss_hp mod 18 in
-        let poison = boss_hp / 18 in
-        let missile = max 3 (r/4) in
-        spent + 53 * missile + 173 * poison
+        let rounds = boss_hp / (3 + 3 + 4) in
+        spent + 53 * rounds
+    method guess_dumb =
+        spent
     method pick_action =
         self#try_action Missile;
         self#try_action Drain;
@@ -100,34 +139,31 @@ object (self)
             raise (Finished spent)
         end
     method play =
-        self#dump "P";
+        (*self#dump "P";*)
         self#do_action;
         self#check_win;
         self#start_turn;
         self#boss_action;
+        if !hard then player_hp <- player_hp - 1;
         if player_hp > 0 then begin
             self#start_turn;
             self#pick_action;
         end
 end
 
-let part1 boss player =
-    assert (snd boss == 8);
-    sq := [];
-    List.iter (fun action -> add_state (new game_state boss player action))
+let fight boss player =
+    ss#clear;
+    List.iter (fun action -> ss#add_state (new game_state boss player action))
     [Missile; Drain; Shield; Poison; Recharge];
-    try
-        while true do
-            let lst = !sq in
-            assert (lst <> []);
-            let sg = snd (List.hd lst) in
-            sq := List.tl lst;
-            sg#play
-        done;
-        assert false
-    with Finished mana -> mana
+    ss#search
 
 let () = 
-    assert (part1 (13, 8) (10, 250) == 173 + 53);
-    assert (part1 (14, 8) (10, 250) == 229 + 113 + 73 + 173 + 53);
-    Printf.printf "%d\n" (part1 (parse "input") (50, 500));
+    assert (fight (13, 8) (10, 250) == 173 + 53);
+    assert (fight (14, 8) (10, 250) == 229 + 113 + 73 + 173 + 53);
+    Printf.printf "Start\n%!";
+    let boss = parse "input" in
+    Printf.printf "%d\n%!" (fight boss (50, 500));
+    (*ss#stats;*)
+    hard := true;
+    Printf.printf "%d\n" (fight boss (49, 500));
+    (*ss#stats;*)
