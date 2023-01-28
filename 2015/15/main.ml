@@ -5,7 +5,7 @@ let getnum w n =
 
 let parse line =
     let w = String.split_on_char ' ' line in
-    Array.init 4 (fun n -> getnum w (n*2+2))
+    List.rev (List.init 5 (fun n -> getnum w (n*2+2)))
 
 let rec readfile ic =
     try
@@ -14,29 +14,38 @@ let rec readfile ic =
     with End_of_file -> []
 
 let add_ing left n right =
-    Array.map2 (fun a b -> a + b * n) left right
+    List.map2 (fun a b -> a + b * n) left right
 
 let total_score cookie =
-    Array.fold_left (fun x y -> x * (max y 0)) 1 cookie
+    List.fold_left (fun x y -> x * (max y 0)) 1 (List.tl cookie)
+
+let part1 = ref 0
+let part2 = ref 0
 
 let rec try_recipe left r_size r_list =
     match r_list with
     | [] -> assert false
-    | [ing] -> total_score (add_ing left r_size ing)
-    | ing::rest -> begin
-        let best = ref 0 in
-        for n = 0 to r_size do
-            let score = try_recipe (add_ing left n ing) (r_size - n) rest in
-            best := max !best score
-        done;
-        !best
+    | [ing] -> begin
+        let recipe = add_ing left r_size ing in
+        let score = total_score recipe in
+        part1 := max !part1 score;
+        if List.hd recipe == 500 then part2 := max !part2 score;
     end
+    | ing::rest -> for n = 0 to r_size do
+        try_recipe (add_ing left n ing) (r_size - n) rest
+    done
 
-let part1 filename =
+let cook filename =
+    part1 := 0;
+    part2 := 0;
     let ings = readfile (open_in filename) in
-    let empty = Array.make 4 0 in
+    let empty = [0; 0; 0; 0; 0] in
     try_recipe empty 100 ings
 
 let () = 
-    assert (part1 "test1" = 62842880);
-    Printf.printf "%d\n" (part1 "input");
+    cook "test1";
+    assert (!part1 = 62842880);
+    assert (!part2 = 57600000);
+    cook "input";
+    Printf.printf "%d\n" !part1;
+    Printf.printf "%d\n" !part2;
