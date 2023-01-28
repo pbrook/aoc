@@ -30,7 +30,7 @@ let rec combs s =
     in
     List.concat_map inner el
 
-let part1 filename =
+let seating break filename =
     let peeps, m = parse filename in
     let happy_pair (n, a) b =
         let h0 = Hashtbl.find m (a, b) in
@@ -39,10 +39,11 @@ let part1 filename =
     in let happy plan =
         let a = List.hd plan in
         let n, b = List.fold_left happy_pair (0, a) (List.tl plan) in
-        fst (happy_pair (n, b) a)
+        if break then n else fst (happy_pair (n, b) a)
     in let orders = combs peeps in
     fold1 max (List.map happy orders)
 
 let () = 
-    assert (part1 "test1" == 330);
-    Printf.printf "%d\n" (part1 "input");
+    assert (seating false "test1" == 330);
+    Printf.printf "%d\n" (seating false "input");
+    Printf.printf "%d\n" (seating true "input");
