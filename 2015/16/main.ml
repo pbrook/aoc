@@ -33,16 +33,31 @@ let rec readfile ic =
         parse line :: readfile ic
     with End_of_file -> []
 
-let match_prop (name, num) =
-    Hashtbl.find spec name == num
+let part1 name expected actual =
+    ignore name;
+    actual == expected
 
-let match_spec a =
-    List.for_all match_prop (snd a)
+let part2 name expected actual = match name with
+    | "cats" | "trees" -> actual > expected
+    | "pomeranians" | "goldfish" -> actual < expected
+    | _ -> actual == expected
 
-let part1 filename =
+
+let find_aunt part aunts =
+    let match_prop (name, num) =
+        let expected = Hashtbl.find spec name in
+        part name expected num in
+    let match_spec a = List.for_all match_prop (snd a) in
+    List.find match_spec aunts
+
+
+let find_sue filename =
     let aunts = readfile (open_in filename) in
-    let who = List.find match_spec aunts in
-    fst who
+    let sue1 = find_aunt part1 aunts in
+    let sue2 = find_aunt part2 aunts in
+    (fst sue1, fst sue2)
 
 let () = 
-    Printf.printf "%d\n" (part1 "input");
+    let sue = find_sue "input" in
+    Printf.printf "%d\n" (fst sue);
+    Printf.printf "%d\n" (snd sue);
