@@ -4,18 +4,26 @@ let rec readfile ic =
         int_of_string line :: readfile ic
     with End_of_file -> []
 
-let rec fill vol tubs =
-    if vol < 0 then 0
-    else if vol == 0 then 1
+let rec fill vol n tubs =
+    if vol < 0 then []
+    else if vol == 0 then [n]
     else match tubs with
-    | [] -> if vol == 0 then 1 else 0
-    | x::xr-> (fill (vol - x) xr) + (fill vol xr)
+    | []-> begin assert (vol > 0); [] end
+    | x::xr -> List.rev_append (fill (vol - x) (n+1) xr) (fill vol n xr)
 
 
-let part1 filename vol =
+let fill_all filename vol =
     let tubs = readfile (open_in filename) in
-    fill vol tubs
+    let res = fill vol 0 tubs in
+    let part1 = List.length res in
+    let minval = List.fold_left min Int.max_int res in
+    let part2 = List.length (List.filter ((==) minval) res) in
+    (part1, part2)
 
 let () = 
-    assert (part1 "test1" 25 == 4);
-    Printf.printf "%d\n" (part1 "input" 150);
+    let test1 = fill_all "test1" 25 in
+    assert (fst test1 == 4);
+    assert (snd test1 == 3);
+    let input = fill_all "input" 150 in
+    Printf.printf "%d\n" (fst input);
+    Printf.printf "%d\n" (snd input);
