@@ -1,0 +1,4 @@
+(executable
+ (public_name 17)
+ (name main)
+ (libraries aoc str))
